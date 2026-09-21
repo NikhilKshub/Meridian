@@ -1,1912 +1,1183 @@
-let termAnimBusy=false;
-function lsGet(key, fallback = null) {
-  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
+function pad(n) {
+  return n.toString().padStart(2, "0");
 }
-function lsSet(key, val) {
-  try {
-    localStorage.setItem(key, val);
-  } catch {}
-}
-function lsInt(key, fallback = 0) {
-  const v = parseInt(lsGet(key, fallback));
-  return isNaN(v) ? fallback : v;
-}
-function lsFloat(key, fallback = 0) {
-  const v = parseFloat(lsGet(key, fallback));
-  return isNaN(v) ? fallback : v;
-}
-function lsJson(key, fallback) {
-  try {
-    const raw = lsGet(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch { return fallback; }
-}
+const DAYS = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
-let audioCtx=null;
-let audioAnalyser=null;
-let audioSource=null;
-let audioGain=null;
-let audioElement=null;
-let isAudioPlaying=false;
-let musicAnimationId=null;
-let musicDuration= 0;
+function tick() {
+  const now = new Date();
+  const h = pad(now.getHours());
+  const m = pad(now.getMinutes());
+  const dateLabel = `${MONTHS[now.getMonth()]} ${now.getDate()}`;
+  document.getElementById("status-time").textContent = `${h}:${m}`;
+  document.getElementById("status-date").textContent = dateLabel;
 
-function getAudioCtx(){
-  if(!audioCtx) audioCtx=new(window.AudioContext || window.webkitAudioContext)();
-  return audioCtx;
+  const sundialHour = document.getElementById("sundial-hour");
+  const sundialMinute = document.getElementById("sundial-minute");
+  if (sundialHour && sundialMinute) {
+    const hourDeg = ((now.getHours() % 12) + now.getMinutes() / 60) * 30;
+    const minuteDeg = now.getMinutes() * 6;
+    sundialHour.style.transform = `rotate(${hourDeg}deg)`;
+    sundialMinute.style.transform = `rotate(${minuteDeg}deg)`;
+  }
+  const bootDay = document.getElementById("boot-day");
+  const bootDate = document.getElementById("boot-date");
+  const bootTime = document.getElementById("boot-time");
+  if (bootDay) bootDay.textContent = DAYS[now.getDay()];
+  if (bootDate) bootDate.textContent = dateLabel;
+  if (bootTime) bootTime.textContent = `${h}:${m}`;
 }
+tick();
+setInterval(tick, 1000 * 15);
 
-// login
-function enterDesktop() {
-  const login = document.getElementById('login-screen');
-  const desktop = document.getElementById('desktop');
-  if (!login || !desktop) return;
-  login.style.opacity = '0';
-  setTimeout(() => {
-    login.style.display = 'none';
-    desktop.style.display = 'block';
-    desktop.style.animation = 'fadeIn .5s ease';
-    setTimeout(spawnWelcomeWindow, 400);
-  }, 350);
+const QUOTES = [
+  { text: "The flower that blooms in adversity is the rarest of all.", from: "Mulan" },
+  { text: "Just keep swimming.", from: "Finding Nemo" },
+  { text: "Hakuna Matata — it means no worries.", from: "The Lion King" },
+  { text: "To infinity, and beyond!", from: "Toy Story" },
+  { text: "You are braver than you believe.", from: "Winnie the Pooh" },
+  { text: "Adventure is out there!", from: "Up" },
+];
+
+// boot screen
+function runBootSequence() {
+  const boot=document.getElementById("boot-screen");
+  const line=document.getElementById("boot-line");
+  const wordmark =document.getElementById("boot-wordmark");
+  const signInBtn =document.getElementById("boot-signin");
+  const quoteEl=document.getElementById("boot-quote");
+
+  const quote =QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  quoteEl.textContent=`"${quote.text}" — ${quote.from}`;
+
+  requestAnimationFrame(() =>{
+    line.classList.add("boot-line-active");
+    wordmark.classList.add("boot-wordmark-active");
+  });
+
+  setTimeout(()=>signInBtn.classList.add("boot-signin-active"), 900);
+  signInBtn.addEventListener("click",()=>{
+    boot.classList.add("boot-hide");
+    setTimeout(() => boot.remove(), 600);
+  });
 }
+runBootSequence();
 
-function spawnWelcomeWindow() {
-  const win = document.getElementById('window-notes');
-  if (!win) return;
-  const hasSavedNotes = lsGet('nebula_notes_content') !== null;
-  const welcomeSeen = lsGet('nebula_welcome_seen') === 'true';
-  if (hasSavedNotes || welcomeSeen) {
+// desktop quote 
+function initDesktopQuote() {
+  const el = document.getElementById("desktop-quote");
+  if (!el) return;
+  const quote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  el.textContent = `"${quote.text}" — ${quote.from}`;
+}
+initDesktopQuote();
+
+// mini player / now playing
+function updateNowPlaying(title, isPlaying) {
+  const strip = document.getElementById("now-playing");
+  const titleEl = document.getElementById("now-playing-title");
+  const subEl = document.getElementById("now-playing-sub");
+  if (!title) {
+    strip.classList.remove("visible");
     return;
   }
-  const cx = window.innerWidth / 2;
-  const cy = window.innerHeight / 2;
-  const w = parseInt(win.dataset.defaultW || 360);
-  const h = parseInt(win.dataset.defaultH || 420);
-
-  win.style.left = cx - w / 2 - 60 + 'px';
-  win.style.top = cy - h / 2 - 40 + 'px';
-  win.style.width = w + 'px';
-  win.style.height = h + 'px';
-  win.style.display = 'flex';
-
-  win.classList.remove('maximized', 'window-closing', 'window-minimizing');
-  win.classList.add('window-opening');
-  setTimeout(() => win.classList.remove('window-opening'), 400);
-
-  const title = win.querySelector('.window-title span:last-child');
-  if (title) {
-    title.textContent = 'Welcome.txt';
-  }
-  bringToFront(win);
-  lsSet('nebula_welcome_seen', 'true');
+  strip.classList.add("visible");
+  strip.classList.toggle("playing", isPlaying);
+  titleEl.textContent = title;
+  subEl.textContent = isPlaying ? "Now Playing" : "Paused";
 }
-
-// clock
-let colonOn = true;
-function updateClock(){
-  const now=new Date();
-  const h=String(now.getHours()).padStart(2,'0');
-  const m=String(now.getMinutes()).padStart(2,'0');
-  colonOn=!colonOn;
-
-  const clockE1=document.getElementById('clock');
-  const dateE1=document.getElementById('date');
-  const loginDay=document.getElementById('login-day');
-  const loginDate=document.getElementById('login-date-text');
-
-  if(clockE1){
-    clockE1.textContent=`${h}${colonOn ? ':' : ' '}${m}`;
-  }
-
-  const dateText=now.toLocaleDateString('en-US',{
-    weekday:'short',
-    month:'short',
-    day:'numeric'
-  }).toUpperCase();
-
-  if(dateE1){
-    dateE1.textContent=dateText;
-  }
-
-  if(loginDay){
-    loginDay.textContent=now.toLocaleDateString('en-US',{
-      weekday:'long'
-    }).toUpperCase();
-  }
-  if(loginDate){
-    loginDate.textContent=now.toLocaleDateString('en-US',{
-      month:'short',
-      day:'2-digit',
-      year:'numeric'
-    }).toUpperCase();
-  }
-}
-setInterval(updateClock,1000);
-updateClock();
-
-// widgets
-let sessionStart=Date.now();
-let sysIntegrity=100;
-function updateTelemetry(){
-  const timeE1= document.getElementById('tel-time');
-  if(timeE1) timeE1.textContent=new Date().toLocaleTimeString('en-US',{hour12:false});
-  const secs=Math.floor((Date.now()-sessionStart)/1000);
-  const hrs=Math.floor(secs / 3600);
-  const mins=Math.floor((secs % 3600)/60);
-  let upStr='';
-  if(hrs>0) upStr += hrs+'h';
-  if(mins>0 || hrs>0 ) upStr+=mins + 'm';
-  upStr+=(secs%60)+'s';
-
-  const uptimeE1=document.getElementById('tel-uptime');
-  if(uptimeE1) uptimeE1.textContent=upStr;
-  sysIntegrity=Math.min(100,sysIntegrity+Math.random()*0.02-0.01);
-  const intE1=document.getElementById('tel-integrity');
-  if(intE1){
-    intE1.textContent=sysIntegrity.toFixed(2)+'%';
-    intE1.style.color=sysIntegrity < 50 ? 'var(--red)':sysIntegrity <80 ? 'var(--yellow)':'var(--green)';
-  }
-}
+document.getElementById("now-playing").addEventListener("click", () => openWindow("music"));
 
 // window management
-let highestZ=500;
-function makeDraggable(win){
-  const header=win.querySelector('.window-header');
-  if(!header)return;
-  let dragging = false;
-  let offX = 0;
-  let offY = 0;
+const apps = {
+  notes:{title:"Notes" },
+  calculator:{title: "Calculator", width: 300, height: 380 },
+  music:{title:"Music", width: 340, height:560},
+  pomodoro:{title:"Pomodoro"},
+  paint:{title:"Paint", width:720, height: 520},
+  snake:{title:"Snake", width:460, height: 560},
+  terminal:{title:"Terminal"},
+};
 
-  function startDrag(e,cx,cy){
-    if(e.target.closest('.win-btn') || win.classList.contains('maximized')) return;
-    dragging=true;
-    offX=cx-win.offsetLeft;
-    offY=cy-win.offsetTop;
-    win.style.transition='none';
+function saveToStorage(key,value) {
+  try {
+    localStorage.setItem(key,JSON.stringify(value));
+  } catch(err){
+    console.log("Couldn't save to storage:",err);
+  }
+}
+
+function loadFromStorage(key, fallback) {
+  try {
+    const raw =localStorage.getItem(key);
+    return raw ===null ? fallback : JSON.parse(raw);
+  } catch(err){
+    return fallback;
+  }
+}
+
+let openWindows = {};
+let topZIndex = 10;
+let windowCount = 0;
+let musicAudioRef = null;
+
+function createWindowElement(appName){
+  const config =apps[appName];
+  const win=document.createElement("div");
+  win.className="window";
+  win.id = "window-" + appName;
+  win.style.position="absolute";
+
+  const offset =(windowCount % 6) * 28;
+  win.style.left= (160 + offset) + "px";
+  win.style.top=(80 + offset) + "px";
+  windowCount++;
+  win.style.width= (config.width || 380) + "px";
+  win.style.height= (config.height || 260) + "px";
+
+  win.innerHTML=`
+    <div class="window-titlebar">
+      <span class="window-title">${config.title}</span>
+      <div class="window-btns">
+        <button class="window-minimize">&#8211;</button>
+        <button class="window-maximize">&#9633;</button>
+        <button class="window-close">&times;</button>
+      </div>
+    </div>
+    <div class="window-content">
+      ${appName==="notes" ? getNotesHTML(): ""}
+      ${appName==="calculator" ? getCalculatorHTML() : ""}
+      ${appName==="pomodoro" ? getPomodoroHTML(): ""}
+      ${appName==="terminal" ? getTerminalHTML(): ""}
+      ${appName==="music" ? getMusicHTML(): ""}
+      ${appName==="paint" ? getPaintHTML(): ""}
+      ${appName==="snake" ? getSnakeHTML(): ""}
+    </div>
+  `;
+  win.querySelector(".window-minimize").addEventListener("click", () => {
+    win.classList.remove("maximized");
+    win.classList.add("minimized");
+    win.style.display = "none";
+    updateDockAutohide();
+  });
+  win.querySelector(".window-close").addEventListener("click",()=>{
+    closeWindow(appName);
+  });
+
+  let restoreState =null;
+  win.querySelector(".window-maximize").addEventListener("click",()=>{
+    if (win.classList.contains("maximized")){
+      win.classList.remove("maximized");
+      win.style.left=restoreState.left;
+      win.style.top=restoreState.top;
+      win.style.width=restoreState.width;
+      win.style.height=restoreState.height;
+    } else{
+      restoreState ={
+        left:win.style.left,
+        top:win.style.top,
+        width:win.style.width,
+        height:win.style.height,
+      };
+      win.classList.add("maximized");
+    }
+    if (win.paintResize) setTimeout(win.paintResize, 0);
+    updateDockAutohide(); 
+  });
+  win.addEventListener("mousedown", () => bringToFront(win));
+  return win;
+}
+
+function openWindow(appName){
+  if (openWindows[appName]){
+    const win=openWindows[appName];
+    if (win.classList.contains("minimized")){
+      win.classList.remove("minimized");
+      win.style.display="flex";
+      updateDockAutohide();
+    }
     bringToFront(win);
+    return;
   }
 
-  function doDrag(cx, cy) {
-    if (!dragging) return;
-    const winW = win.offsetWidth || parseInt(win.style.width) || 400;
-    const x = Math.max(-(winW - 50), Math.min(cx - offX, window.innerWidth - 50));
-    const y = Math.max(40, Math.min(cy - offY, window.innerHeight - 40));
-    win.style.left = x + 'px';
-    win.style.top = y + 'px';
-  }
-  function endDrag() {
-    if (dragging) lsSet(`nebula_winPos_${win.id}`, JSON.stringify({ left: win.style.left, top: win.style.top }));
-    dragging = false;
-    win.style.transition = '';
-  }
+  const win=createWindowElement(appName);
+  document.getElementById("desktop").appendChild(win);
+  openWindows[appName] =win;
+  makeDraggable(win);
+  if (appName ==="calculator") initCalculator(win);
+  if (appName ==="pomodoro") initPomodoro(win);
+  if (appName ==="notes") initNotes(win);
+  if (appName ==="terminal") initTerminal(win);
+  if (appName ==="music") initMusic(win);
+  if (appName ==="paint") initPaint(win);
+  if (appName ==="snake") initSnake(win);
+  bringToFront(win);
+}
 
-  header.addEventListener('mousedown', e => startDrag(e, e.clientX, e.clientY));
-  document.addEventListener('mousemove', e => doDrag(e.clientX, e.clientY));
-  document.addEventListener('mouseup', endDrag);
-  header.addEventListener('touchstart', e => {
-    if (!e.target.closest('.win-btn')) e.preventDefault();
-    startDrag(e, e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: false });
-  document.addEventListener('touchmove', e => {
-    if (dragging) e.preventDefault();
-    doDrag(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: false });
-  document.addEventListener('touchend', endDrag);
+function closeWindow(appName){
+  const win = openWindows[appName];
+  if (!win) return;
+  if (appName==="music" &&musicAudioRef) {
+    musicAudioRef.pause();
+    musicAudioRef=null;
+    updateNowPlaying(null,false);
+  }
+  if(win.snakeCleanup)win.snakeCleanup();
+  win.style.transition ="opacity 0.15s ease,transform 0.15s ease";
+  win.style.opacity="0";
+  win.style.transform="scale(0.97)";
+  setTimeout(()=>win.remove(), 150);
+  delete openWindows[appName];
+  updateDockAutohide();
 }
 
 function bringToFront(win){
-  highestZ++;
-  win.style.zIndex=highestZ;
-  document.querySelectorAll('.window').forEach(w=>w.classList.remove('active'));
-  win.classList.add('active');
+  topZIndex =topZIndex+1;
+  win.style.zIndex=topZIndex;
+  document.querySelectorAll(".window").forEach((w) => w.classList.remove("active"));
+  win.classList.add("active");
 }
-function enforceWindowBounds(win){
-  let x =parseInt(win.style.left) || win.getBoundingClientRect().left;
-  let y =parseInt(win.style.top) || win.getBoundingClientRect().top;
-  const w = win.getBoundingClientRect().width || parseInt(win.style.width) || 400;
-  x= Math.max(-(w-50),Math.min(x,window.innerWidth-50));
-  y=Math.max(40,Math.min(y,window.innerHeight-40));
-  win.style.left=x+'px';
-  win.style.top=y+'px';
-}
-function openWindow(id){
-  const win=document.getElementById(id);
-  if(!win) return;
-
-  if(win.style.display !== 'flex'){
-    if(id==='window-terminal') resetTerminal();
-    if(id==='window-game') resetGameUI();
-  }
-
-  win.style.display='flex';
-  void win.offsetWidth;
-  
-  if (!win.classList.contains('maximized')) {
-    win.style.width = win.dataset.defaultW + 'px';
-    win.style.height = win.dataset.defaultH + 'px';
-    const savedPos = lsJson(`nebula_winPos_${id}`);
-    if (savedPos) {
-      win.style.left = savedPos.left;
-      win.style.top = savedPos.top;
-    }
-    enforceWindowBounds(win);
-  }
-  if (id === 'window-notes' && lsGet('nebula_welcome_seen') === 'true') {
-    const title = win.querySelector('.window-title span:last-child');
-    if (title) title.textContent = 'Notes';
-  }
-  bringToFront(win);
-  win.classList.remove('window-closing','window-minimizing');
-  win.classList.add('window-opening');
-  setTimeout(()=> win.classList.remove('window-opening'),400);
-  if(id==='window-paint') setTimeout(initPaint,50);
-  if(id==='window-game') setTimeout(initGame,50);
-}
-
-function closeWindow(win){
-  win.classList.remove('window-opening','window-minimizing');
-  win.classList.add('window-closing');
-  setTimeout(()=>{
-    win.style.display='none';
-    win.classList.remove('active','maximized','window-closing');
-    if(win.id==='window-terminal') resetTerminal();
-    if(win.id==='window-music') stopMusic();
-    if(win.id==='window-game') stopGame();
-      },150)
-}
-
-// sticky notes
-function initStickyNotes(){
-  const textarea=document.getElementById('sticky-notes-input');
-  const clearBtn=document.getElementById('sticky-notes-clear');
-  const charCount=document.getElementById('sticky-char-count');
-  if(!textarea) return;
-  const saved=lsGet('nebula_sticky_notes');
-  if(saved) textarea.value=saved;
-  if(charCount) charCount.textContent=textarea.value.length + 'chars';
-  textarea.addEventListener('input',()=>{
-    lsSet('nebula_sticky_notes',textarea.value);
-    if(charCount) charCount.textContent=textarea.value.length + 'chars';
+function makeDraggable(win){
+  const header=win.querySelector(".window-titlebar");
+  let isDragging=false;
+  let offsetX=0;
+  let offsetY=0;
+  header.addEventListener("mousedown",(e)=>{
+    if (win.classList.contains("maximized")) return;
+    isDragging=true;
+    offsetX=e.clientX -win.offsetLeft;
+    offsetY=e.clientY -win.offsetTop;
+    bringToFront(win);
   });
-
-  clearBtn?.addEventListener('click',()=>{
-    textarea.value='';
-    lsSet('nebula_sticky_notes','');
-    if(charCount) charCount.textContent='0 chars';
-    textarea.focus();
+  document.addEventListener("mousemove", (e) => {
+    if (!isDragging) return;
+    win.style.left = (e.clientX - offsetX) + "px";
+    win.style.top = (e.clientY - offsetY) + "px";
   });
+  document.addEventListener("mouseup", () => { isDragging = false; });
 }
-
-function arrangeWindows(){
-  const wins=Array.from(document.querySelectorAll('.window')).filter(w=> w.style.display === 'flex');
-  if(!wins.length) return;
-  const cols=Math.ceil(Math.sqrt(wins.length));
-  const pad=40;
-  const w= Math.floor((window.innerWidth - pad *2)/cols);
-  const h= Math.floor((window.innerHeight-80)/ Math.ceil(wins.length/cols));
-  wins.forEach((win,i)=>{
-    win.classList.remove('maximized');
-    win.style.transition='all 0.5s cubic-bezier(0.22,1,0.36,1)';
-    win.style.left=pad + (i%cols) * w + 'px';
-    win.style.top=60 + Math.floor(i/cols)*h + 'px';
-    win.style.width= win.dataset.defaultW + 'px';
-    win.style.height= (win.dataset.defaultH || 420) + 'px';
-    setTimeout(()=> win.style.transition='' ,500);
+document.querySelectorAll(".app-tile").forEach((tile) => {
+  tile.addEventListener("click", () => {
+    openWindow(tile.dataset.app);
   });
+});
+
+// calculator
+function getCalculatorHTML(){
+  return `
+    <div class="calc">
+      <div class="calc-display" id="calc-display">0</div>
+      <div class="calc-buttons">
+        <button class="calc-btn calc-clear" data-key="clear">C</button>
+        <button class="calc-btn" data-key="/">÷</button>
+        <button class="calc-btn" data-key="*">×</button>
+        <button class="calc-btn" data-key="backspace">⌫</button>
+        <button class="calc-btn" data-key="7">7</button>
+        <button class="calc-btn" data-key="8">8</button>
+        <button class="calc-btn" data-key="9">9</button>
+        <button class="calc-btn" data-key="-">−</button>
+        <button class="calc-btn" data-key="4">4</button>
+        <button class="calc-btn" data-key="5">5</button>
+        <button class="calc-btn" data-key="6">6</button>
+        <button class="calc-btn" data-key="+">+</button>
+        <button class="calc-btn" data-key="1">1</button>
+        <button class="calc-btn" data-key="2">2</button>
+        <button class="calc-btn" data-key="3">3</button>
+        <button class="calc-btn calc-equals" data-key="=" style="grid-row: span 2;">=</button>
+        <button class="calc-btn" data-key="0" style="grid-column: span 2;">0</button>
+        <button class="calc-btn" data-key=".">.</button>
+      </div>
+    </div>
+  `;
 }
-
-// wallpaper;
-function applyWallpaper(url){
-  const bg=document.getElementById('desktop-bg');
-  if(!bg) return;
-  bg.style.backgroundImage = `url("${url}")`;
-  bg.style.backgroundSize='cover';
-  bg.style.backgroundPosition='center';
-  bg.style.backgroundRepeat='no-repeat';
-}
-
-function initWallpaper() {
-  const saved = lsGet('nebula_wallpaper');
-  if (saved) applyWallpaper(saved);
-  const input=document.getElementById('wallpaper-input');
-  if(!input) return;
-  input.addEventListener('change',e => {
-    const file = e.target.files[0];
-    if(!file) return;
-    const reader=new FileReader();
-    reader.onload=evt => {
-      try { localStorage.setItem('nebula_wallpaper', evt.target.result); } catch {}
-      applyWallpaper(evt.target.result);
-      showNotification('Wallpaper updated! ✨', 'success');
-    };
-    reader.readAsDataURL(file);
-    input.value = '';
-  });
-}
-
-// wormhole system
-let singularityActive=false;
-let singularityGhosts=[];
-let singularityParticles=[];
-let wormholeTimeout=null;
-let singularityRAF=null;
-let singularityStartTime=null;
-let clockGlitchInterval=null;
-function fakeReboot(){
-  const fade=document.createElement('div');
-
-  Object.assign(fade.style,{
-    position:'fixed',
-    inset:'0',
-    background:'#000',
-    zIndex:'999999',
-    transition:'opacity 0.8s ease',
-    opacity:'0'
-  });
-  document.body.appendChild(fade);
-  setTimeout(() => {
-    fade.style.opacity='1';
-
-    setTimeout(() => {
-      cancelAnimationFrame(singularityRAF);
-      clearInterval(clockGlitchInterval);
-      singularityGhosts.forEach(g => g.ghost?.parentNode?.removeChild(g.ghost));
-      singularityGhosts=[];
-      const canvas=document.getElementById('wormhole-canvas');
-      if(canvas){
-        canvas.style.display='none';
-        const ctx=canvas.getContext('2d');
-        if(ctx){
-          ctx.clearRect(0,0,canvas.width,canvas.height);
+function initCalculator(win){
+  const display=win.querySelector("#calc-display");
+  let expression="";
+  win.querySelectorAll(".calc-btn").forEach((btn)=>{
+    btn.addEventListener("click",()=>{
+      const key=btn.dataset.key;
+      if (key==="clear"){
+        expression ="";
+      } else if (key ==="backspace") {
+        expression=expression.slice(0, -1);
+      } else if(key==="="){
+        try{
+          expression=String(Function("return " + expression)());
+        } catch (err){
+          expression="Error";
         }
+      }else{
+        expression+=key;
       }
-      const overlay=document.getElementById('wormhole-overlay');
-      if(overlay){
-        overlay.style.display='none';
-        overlay.style.background='';
-        overlay.style.transition='';
-        overlay.style.pointerEvents='';
-        const stage=overlay.querySelector('.wormhole-stage');
-        if(stage){
-          stage.classList.remove('active');
-        }
-        const core=overlay.querySelector('.wormhole-core');
-        if(core){
-          core.classList.remove('expanding');
-          core.style.transform='';
-        }
-
-        const txt=overlay.querySelector('.wormhole-text');
-        if(txt){
-          txt.style.opacity='';
-          txt.style.transition='';
-        }
-
-        const sub=overlay.querySelector('.wormhole-sub');
-        if(sub){
-          sub.style.opacity='';
-          sub.style.transition='';
-        }
-      }
-
-      singularityActive=false;
-      const desktop=document.getElementById('desktop');
-      if(desktop){
-        desktop.style.display='none';
-        desktop.style.animation='none';
-      }
-      document.querySelectorAll('.window').forEach(win => {
-        win.style.display='none';
-        win.classList.remove('active','maximized','window-opening','window-closing','window-minimizing');
-      });
-
-      document.querySelectorAll(
-        '.window, .desk-icon, .widget, #dock, #topbar'
-      ).forEach(el => {
-        el.style.visibility='';
-        el.style.opacity='';
-      });
-      const login=document.getElementById('login-screen');
-      if(login){
-        login.style.display='flex';
-        login.style.opacity='1';
-      }
-      fade.remove();
-    },1200);
-  },50);
-}
-
-function triggerWormhole(){
-  if(singularityActive) return;
-  const overlay=document.getElementById('confirm-overlay');
-
-  if(overlay && overlay.style.display !== 'flex'){
-    overlay.style.display='flex';
-    document.getElementById('confirm-yes').onclick=()=>{
-      overlay.style.display='none';
-      doWormhole();
-    };
-    document.getElementById('confirm-no').onclick=()=>{
-      overlay.style.display='none';
-      singularityActive=false;
-    };
-  }
-}
-
-function doWormhole(){
-  singularityActive=true;
-  wormholeTimeout=setTimeout(fakeReboot,12000);
-  const overlay=document.getElementById('wormhole-overlay');
-  if(overlay){
-    overlay.style.display='flex';
-    overlay.style.background='transparent';
-    overlay.style.pointerEvents='none';
-    overlay.querySelector('.wormhole-stage')?.classList.add('active');
-    const txt = overlay.querySelector('.wormhole-text');
-    const sub = overlay.querySelector('.wormhole-sub');
-    if(txt){
-      txt.style.opacity='0';
-      txt.style.transition='none';
-    }
-    if(sub){
-      sub.style.opacity='0';
-      sub.style.transition='none';
-    }
-  }
-
-  const canvas = document.getElementById('wormhole-canvas');
-  if(canvas){
-    canvas.style.display='block';
-    canvas.width=window.innerWidth;
-    canvas.height=window.innerHeight;
-  }
-  initAccretionParticles();
-  singularityStartTime=Date.now();
-  singularityRAF=requestAnimationFrame(
-    singularityCoreLoop
-  );
-  setTimeout(startClockGlitch,700);
-  setTimeout(()=> {
-    stopClockGlitch();
-    cancelAnimationFrame(singularityRAF);
-    spawnGhostsAndBeginSuction();
-  },1500);
-}
-function singularityCoreLoop(){
-  const canvas = document.getElementById('wormhole-canvas');
-  if(!canvas) return;
-  const ctx=canvas.getContext('2d');
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  drawAccretionGlow(ctx,canvas.width / 2,canvas.height / 2,(Date.now() - singularityStartTime) / 1000
-  );
-  singularityRAF=requestAnimationFrame(
-    singularityCoreLoop
-  );
-}
-function startClockGlitch() {
-  const cl = document.getElementById('clock');
-  if (!cl) return;
-  cl.classList.add('clock-glitch');
-  const chars = '░▒▓█01✕Ø';
-  clockGlitchInterval = setInterval(() => {
-    let s = '';
-    for (let i = 0; i < 5; i++) {
-      s += i === 2
-        ? ':'
-        : chars[Math.floor(Math.random() * chars.length)];
-    }
-    cl.textContent = s;
-  },70);
-}
-
-function stopClockGlitch() {
-  clearInterval(clockGlitchInterval);
-  clockGlitchInterval = null;
-  document
-    .getElementById('clock')
-    ?.classList.remove('clock-glitch');
-}
-
-function initAccretionParticles() {
-  singularityParticles = [];
-  for (let i = 0; i < 100; i++) {
-    singularityParticles.push({
-      angle: (Math.PI * 2 * i) / 55,
-      radius: 85 + Math.random() * 75,
-      speed: 0.018 + Math.random() * 0.026,
-      size: 1.2 + Math.random() * 2.2,
-      color: ['#FFDE4D','#00FFAB','#B98EFF'][
-        Math.floor(Math.random() * 3)
-      ],
-      trail: []
-    });
-  }
-}
-function drawAccretionGlow(ctx, cx, cy, elapsed) {
-  const coreR = 80;
-  const pulse = Math.sin(Date.now() * 0.005);
-  const outerR = coreR + 130 + pulse * 45;
-  const grd = ctx.createRadialGradient(cx,cy,coreR - 10,cx,cy,outerR);
-  grd.addColorStop(0,'rgba(255,222,77,0.85)');
-  grd.addColorStop(0.15,'rgba(255,222,77,0.30)');
-  grd.addColorStop(0.5,'rgba(0,255,171,0.08)');
-  grd.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle = grd;
-  ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
-  singularityParticles.forEach(p => {
-    p.angle += p.speed * (1 + elapsed * 1.5);
-    p.radius = Math.max(26,p.radius - 0.3);
-    const px =cx + Math.cos(p.angle) * p.radius;
-    const py =cy + Math.sin(p.angle) * p.radius;
-    p.trail.push({x:px,y:py,a:1});
-    if(p.trail.length > 7){
-      p.trail.shift();
-    }
-    p.trail.forEach((t,i) => {
-      t.a *= 0.88;
-      ctx.beginPath();
-      ctx.arc(t.x,t.y,p.size * (i / p.trail.length),0,Math.PI * 2);
-      ctx.fillStyle =p.color +Math.floor(t.a * 255).toString(16).padStart(2,'0');
-      ctx.fill();
-    });
-    ctx.beginPath();
-    ctx.arc(px, py, p.size,0, Math.PI * 2);
-    ctx.fillStyle=p.color;
-    ctx.fill();
-  });
-}
-
-function spawnGhostsAndBeginSuction() {
-  singularityGhosts = [];
-  const targets = [
-    ...Array.from(document.querySelectorAll('.window')
-    ).filter(w => getComputedStyle(w).display === 'flex'
-    ),
-    ...Array.from(
-      document.querySelectorAll('.desk-icon, .widget')
-    ),
-    document.getElementById('dock'),
-    document.getElementById('topbar')
-  ].filter(
-    el =>el && el.offsetWidth > 0 && el.offsetHeight > 0
-  );
-  targets.forEach(el => {
-    const rect = el.getBoundingClientRect();
-    if(!rect.width || !rect.height) return;
-    const ghost = el.cloneNode(true);
-    ghost.removeAttribute('style');
-    ghost.classList.remove(
-      'maximized',
-      'active',
-      'screen-shake'
-    );
-    Object.assign(ghost.style,{ position:'fixed',
-      left:rect.left + 'px',
-      top:rect.top + 'px',
-      width:rect.width + 'px',
-      height:rect.height + 'px',
-      margin:'0',
-      padding:getComputedStyle(el).padding,
-      transform:'none',
-      transformOrigin:'50% 50%',
-      transition:'none',
-      animation:'none',
-      zIndex:'99986',
-      pointerEvents:'none',
-      boxSizing:'border-box',
-      opacity:'1'
-    });
-
-    document.body.appendChild(ghost);
-    el.style.visibility='hidden';
-    el.style.opacity='0';
-    singularityGhosts.push({
-      ghost,
-      cx:rect.left + rect.width / 2,
-      cy:rect.top + rect.height / 2,
-      initLeft:rect.left,
-      initTop:rect.top,
-      vx:0,
-      vy:0,
-      isWindow:el.classList.contains('window'),
-      status:'flying',
-      collapseT:0
+      display.textContent=expression || "0";
     });
   });
-  const canvas = document.getElementById(
-    'wormhole-canvas'
-  );
-  if(canvas){canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// pomodoro
+function getPomodoroHTML(){
+  return `
+    <div class="pomodoro">
+      <div class="pomo-tabs">
+        <button class="pomo-tab active" data-mode="1500">Focus</button>
+        <button class="pomo-tab" data-mode="300">Short Break</button>
+        <button class="pomo-tab" data-mode="900">Long Break</button>
+        <button class="pomo-tab" data-mode="custom">Custom</button>
+      </div>
+      <div class="pomo-custom-row" id="pomo-custom-row" style="display:none;">
+        <input type="number" class="pomo-custom-input" id="pomo-custom-mins" min="1" max="180" placeholder="Minutes" />
+        <button class="pomo-btn" id="pomo-custom-set">Set</button>
+      </div>
+      <div class="pomo-display" id="pomo-display">25:00</div>
+      <div class="pomo-controls">
+        <button class="pomo-btn" data-action="start">Start</button>
+        <button class="pomo-btn" data-action="pause">Pause</button>
+        <button class="pomo-btn" data-action="reset">Reset</button>
+      </div>
+    </div>
+  `;
+}
+function initPomodoro(win) {
+  const display=win.querySelector("#pomo-display");
+  let totalSeconds=25 * 60;
+  let modeSeconds=25 * 60;
+  let intervalId=null;
+
+  function render(){
+    const minutes=Math.floor(totalSeconds / 60);
+    const seconds=totalSeconds % 60;
+    display.textContent=pad(minutes) + ":" + pad(seconds);
   }
 
-  singularityStartTime=Date.now();
-  singularityRAF=requestAnimationFrame(
-    singularitySuctionLoop
-  );
-}
-function singularitySuctionLoop() {
-  const canvas = document.getElementById(
-    'wormhole-canvas'
-  );
-  if(!canvas) return;
-  const ctx=canvas.getContext('2d');
-  const cx=canvas.width / 2;
-  const cy=canvas.height / 2;
-  const elapsed =
-    (Date.now() - singularityStartTime) / 1000;
-  const fadeAlpha =
-    Math.min(
-      0.2,
-      0.03 + elapsed * 0.06
-    );
-  ctx.fillStyle=
-    `rgba(0,0,0,${fadeAlpha})`;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  drawAccretionGlow(ctx,cx,cy, elapsed);
-
-  let allDone =
-    singularityGhosts.length > 0;
-  singularityGhosts.forEach(g => {
-    if(g.status === 'consumed') return;
-    allDone=false;
-    if(g.status === 'collapsing'){
-      g.collapseT += 0.1;
-      if(g.collapseT >= 1){
-        g.status='consumed';
-        g.ghost?.remove();
+  function start(){
+    if (intervalId) return;
+    intervalId=setInterval(() => {
+      if (totalSeconds <= 0) {
+        clearInterval(intervalId);
+        intervalId = null;
         return;
       }
-      const sc=1 - g.collapseT;
-      const tx =cx -g.initLeft -parseFloat(g.ghost.style.width) / 2;
-      const ty = cy -g.initTop - parseFloat(g.ghost.style.height) / 2;
-      g.ghost.style.opacity=sc;
-      g.ghost.style.transform=
-        `translate(${tx}px,${ty}px) scale(${sc})`;
-      return;
-    }
-    const dx=cx - g.cx;
-    const dy=cy - g.cy;
-    const dist=Math.sqrt(dx * dx + dy * dy);
-    const ang=Math.atan2(dy,dx);
-    if(dist < 40){
-      g.status='collapsing';
-      g.collapseT=0;
-      return;
-    }
-    const force =Math.pow(elapsed,1.9) *52 /(g.isWindow ? 2.0 : 0.9) /Math.max(Math.sqrt(dist),5);
-    g.vx = (g.vx + Math.cos(ang) * force) * 0.89;
-    g.vy = (g.vy + Math.sin(ang) * force) * 0.89;
-    g.cx += g.vx;
-    g.cy += g.vy;
-    const stretch = 1 + (120 / (dist + 16)) * Math.min(  1.6, elapsed * 0.85);
-    const offX = g.cx - g.initLeft - parseFloat(g.ghost.style.width) / 2;
-    const offY = g.cy - g.initTop - parseFloat(g.ghost.style.height) / 2;
-    g.ghost.style.transform =
-      `translate(${offX}px,${offY}px)
-       rotate(${ang}rad)
-       scale(${stretch},${Math.max(0.1,1 / stretch)})
-       rotate(${-ang}rad)`;
-  });
-
-  if(allDone){
-    finalConsumption();
-  }else{
-    singularityRAF=requestAnimationFrame(
-      singularitySuctionLoop
-    );
+      totalSeconds--;
+      render();
+    }, 1000);
   }
-}
-
-function finalConsumption() {
-  clearTimeout(wormholeTimeout);
-  wormholeTimeout=null;
-  const overlay=document.getElementById('wormhole-overlay');
-  const txt=overlay?.querySelector('.wormhole-text');
-  const sub=overlay?.querySelector('.wormhole-sub');
-  if(txt){
-    txt.style.transition=
-      'opacity 0.35s ease';
-    txt.style.opacity='1';
+  function pause(){
+    clearInterval(intervalId);
+    intervalId=null;
   }
-  if(sub){
-    sub.style.transition=
-      'opacity 0.35s ease 0.15s';
-    sub.style.opacity='1';
-  }
-  const core=
-    overlay?.querySelector('.wormhole-core');
-
-  if(core){
-    setTimeout(
-      () => core.classList.add('expanding'),
-      150
-    );
+  function reset(){
+    pause();
+    totalSeconds=modeSeconds;
+    render();
   }
 
-  setTimeout(() => {
-    if(overlay){
-      overlay.style.transition=
-        'background 0.35s ease';
-
-      overlay.style.background='#000';
-      overlay.style.pointerEvents='auto';
-    }
-  },250);
-
-  setTimeout(() => {
-    const flash=
-      document.createElement('div');
-
-    flash.className='collapse-flash';
-
-    flash.style.animation=
-      'collapseFlash 0.45s ease forwards';
-
-    document.body.appendChild(flash);
-  },450);
-
-  setTimeout(() => {
-    if(!document.hidden){
-      setTimeout(fakeReboot,200);
-    }
-  },1200);
-}
-
-//terminal
-let termHistory = [];
-let historyIdx = -1;
-
-function nebulaAscii() {
-  return `<div class="term-ascii">    _   __     __          __     
-   / | / /__  / /_  __  __/ /___ _
-  /  |/ / _ \\/ __ \\/ / / / / __ \`/
- / /|  /  __/ /_/ / /_/ / / /_/ / 
-/_/ |_/\\___/_.___/\\__,_/_/\\__,_/  
-                                  </div>`;
-}
-
-function resetTerminal() {
-  const output = document.getElementById('term-output');
-  const input = document.getElementById('term-input');
-  if (output) {
-    output.innerHTML = `
-      ${nebulaAscii()}
-      <div class="term-line term-welcome">NEBULA OS v1.0 — Welcome, Explorer.</div>
-      <div class="term-line term-hint">Type <span class="term-cmd">help</span> to see available commands</div>
-      <div class="term-line"></div>
-    `;
-  }
-  if (input) {
-    input.value = '';
-  }
-}
-function initTerminal() {
-  const input = document.getElementById('term-input');
-  if (!input) return;
-  const commands = {
-    help: () => `<div class="help-table">
-      <span class="help-cmd">about</span><span class="help-desc">About Nebula OS</span>
-      <span class="help-cmd">clear</span><span class="help-desc">Clear terminal screen</span>
-      <span class="help-cmd">cowsay</span><span class="help-desc">Moo.</span>
-      <span class="help-cmd">creator</span><span class="help-desc">Who made this?</span>
-      <span class="help-cmd">credits</span><span class="help-desc">View credits</span>
-      <span class="help-cmd">date</span><span class="help-desc">Show current date</span>
-      <span class="help-cmd">echo</span><span class="help-desc">Echo text back</span>
-      <span class="help-cmd">fortune</span><span class="help-desc">Print a random quote</span>
-      <span class="help-cmd">hack</span><span class="help-desc">Simulate hacking</span>
-      <span class="help-cmd">matrix</span><span class="help-desc">Trigger matrix rain</span>
-      <span class="help-cmd">motd</span><span class="help-desc">Message of the day</span>
-      <span class="help-cmd">neofetch</span><span class="help-desc">Display system info</span>
-      <span class="help-cmd">reboot</span><span class="help-desc">Restart system</span>
-      <span class="help-cmd">singularity</span><span class="help-desc">Trigger wormhole</span>
-      <span class="help-cmd">stardust</span><span class="help-desc">Print stardust</span>
-      <span class="help-cmd">time</span><span class="help-desc">Show current time</span>
-      <span class="help-cmd">uptime</span><span class="help-desc">Show session uptime</span>
-      <span class="help-cmd">version</span><span class="help-desc">Show OS version</span>
-      <span class="help-cmd">whoami</span><span class="help-desc">Show user info</span>
-    </div>`,
-    about: () => 'Nebula OS is a neo-brutalist web-based operating system designed for exploration.',
-    version: () => 'Nebula OS version 1.0.0-rc1 (HTML5/CSS3/JS)',
-    clear: () => {
-      document.getElementById('term-output').innerHTML = '';
-      return null;
-    },
-    date: () => new Date().toDateString(),
-    time: () => new Date().toLocaleTimeString(),
-    uptime: () => `Up ${Math.floor(performance.now() / 1000)} seconds`,
-    echo: args => escapeHtml(args.join(' ')) || 'Usage: echo [text]',
-    whoami: () => 'explorer@nebula-os',
-    neofetch: () => {
-      const icons = document.querySelectorAll('.desk-icon').length;
-      return `${nebulaAscii()}<div class="term-ascii">
-    OS: NEBULA v1.0
-    Kernel: HTML5/CSS3/JS
-    Shell: nebula-sh
-    Uptime: ${Math.floor(performance.now() / 1000)}s
-    Packages: ${icons} (web apps)
-    Resolution: ${window.screen.width}x${window.screen.height}
-</div>`;
-    },
-    fortune: () => {
-      const q = [
-        'A computer lets you make more mistakes faster than any invention in human history.',
-        'To iterate is human, to recurse divine.',
-        'There are 10 types of people: those who understand binary, and those who don\'t.',
-        'The best way to predict the future is to invent it.'
-      ];
-      return q[Math.floor(Math.random() * q.length)];
-    },
-    cowsay: args => {
-      const text = escapeHtml(args.join(' ')) || 'Moo';
-      return `<div class="term-ascii">
-  < ${text} >
-    \\   ^__^
-     \\  (oo)\\_______
-        (__)\\       )\\/\\
-            ||----w |
-            ||     ||
-</div>`;
-    },
-
-    credits: () => 'Built with blood, sweat, and CSS gradients.',
-    motd: () => 'Welcome to Nebula OS! Keep your spacesuit on.',
-    stardust: () => '✨ * . * . ✨ * . ✨ * .',
-    creator: () => 'Created by a wandering space explorer.',
-    matrix: () => {
-      if (termAnimBusy) return 'Sequence already active.';
-      termAnimBusy = true;
-      startMatrix();
-      setTimeout(() => {
-        termAnimBusy = false;
-      }, 1500);
-      return 'Initiating matrix rain...';
-    },
-    hack: () => {
-      if (termAnimBusy) return 'Sequence already active.';
-      termAnimBusy = true;
-      simulateHack();
-      setTimeout(() => {
-        termAnimBusy = false;
-      }, 3000);
-      return 'Initiating hack sequence...';
-    },
-    singularity: () => {
-      setTimeout(triggerWormhole, 500);
-      return '<span class="term-alert">SINGULARITY IMMINENT...</span>';
-    },
-    reboot: () => {
-      setTimeout(fakeReboot, 1000);
-      return 'Rebooting...';
-    }
-  };
-  input.addEventListener('keydown', e => {
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (termHistory.length > 0) {
-        historyIdx = Math.min(
-          historyIdx + 1,
-          termHistory.length - 1
-        );
-        input.value = termHistory[termHistory.length - 1 - historyIdx];
-      }
-      return;
-    }
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (historyIdx > 0) {
-        historyIdx--;
-        input.value =
-          termHistory[termHistory.length - 1 - historyIdx];
-      } else {
-        historyIdx = -1;
-        input.value = '';
-      }
-      return;
-    }
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const val = input.value;
-      const matches = Object.keys(commands)
-        .filter(c => c.startsWith(val));
-      if (matches.length === 1) {
-        input.value = matches[0] + ' ';
-      } else if (matches.length > 1) {
-        const output =
-          document.getElementById('term-output');
-        const l = document.createElement('div');
-        l.className = 'term-line';
-        l.textContent = matches.join('  ');
-        output.appendChild(l);
-        output.scrollTop = output.scrollHeight;
-      }
-      return;
-    }
-    if (e.key !== 'Enter') return;
-    const cmd = input.value.trim();
-    input.value = '';
-    if (!cmd) return;
-    termHistory.push(cmd);
-    historyIdx = -1;
-    const output =
-      document.getElementById('term-output');
-    if (!output) return;
-    const cmdLine =
-      document.createElement('div');
-    cmdLine.className = 'term-line';
-    cmdLine.innerHTML =
-      `<span style="color:#38E54D">❯</span> <span style="color:#FFDE4D">${escapeHtml(cmd)}</span>`;
-    cmdLine.style.opacity = '1';
-    output.appendChild(cmdLine);
-    const key =
-      commands[cmd.toLowerCase()]
-        ? cmd.toLowerCase()
-        : cmd.split(' ')[0].toLowerCase();
-    if (commands[key]) {
-      const result =
-        commands[key](cmd.split(' ').slice(1));
-      if (result !== null) {
-        const res =
-          document.createElement('div');
-        res.className = 'term-line';
-        res.innerHTML = result;
-        res.style.color = '#00FFAB';
-        res.style.opacity = '1';
-        output.appendChild(res);
-      }
-    } else {
-      const err =
-        document.createElement('div');
-      err.className = 'term-line';
-      err.textContent =`Command not found: ${cmd.split(' ')[0]}`;
-      err.style.color = '#FF004D';
-      err.style.opacity = '1';
-      output.appendChild(err);
-    }
-    output.scrollTop = output.scrollHeight;
-  });
-}
-function escapeHtml(t){
-  const d = document.createElement('div');
-  d.textContent = t;
-  return d.innerHTML;
-}
-function startMatrix() {
-  const output = document.getElementById('term-output');
-  if (!output) return;
-  const chars =
-    'ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ';
-  for (let i = 0; i < 15; i++) {
-    setTimeout(() => {
-      const line =
-        document.createElement('div');
-      line.className = 'term-line';
-      line.style.color = '#38E54D';
-      line.textContent =
-        Array(40).fill(0).map(() =>chars[Math.floor(Math.random() * chars.length)]).join('');
-      output.appendChild(line);
-      output.scrollTop = output.scrollHeight;
-    }, i * 80);
-  }
-}
-
-function simulateHack(){
-  const output =
-    document.getElementById('term-output');
-  if(!output) return;
-  const steps=[
-    {t:'Bypassing firewall...', c:'#ff6868'},
-    {t:'Accessing mainframe...', c:'#ff6b6b'},
-    {t:'Decrypting passwords...', c:'#ff6b6b'},
-    {t:'Uploading payload...', c:'#ff6b6b'},
-    {t:'ACCESS DENIED. Just kidding! 😄', c:'#FFDE4D'}
-  ];
-  steps.forEach((s,i) => setTimeout(() => {
-    const line =
-      document.createElement('div');
-    line.className='term-line';
-    line.textContent =
-      `[${String(i + 1).padStart(2,'0')}/05] ${s.t}`;
-    line.style.color=s.c;
-    line.style.opacity='1';
-    output.appendChild(line);
-    output.scrollTop=output.scrollHeight;
-  },i * 500));
-}
-
-// calculator 
-let calcCurrent = '0', calcPrev = null, calcOp = null, calcReset = false;
-function initCalculator() {
-  calcCurrent = '0'; calcPrev = null; calcOp = null; calcReset = false;
-  updateCalc();
-  document.querySelectorAll('.c-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const val = btn.dataset.val;
-      const op = btn.dataset.op;
-      if (val !== undefined) {
-        calcCurrent = calcReset ? val : (calcCurrent === '0' ? val : calcCurrent + val);
-        calcReset = false;
-        if (calcCurrent.length > 12) calcCurrent = calcCurrent.slice(0, 12);
-        updateCalc();
-      } else if (op) {
-        handleCalcOp(op);
-      }
+  win.querySelectorAll(".pomo-btn").forEach((btn)=>{
+    btn.addEventListener("click",()=>{
+      const action=btn.dataset.action;
+      if (action==="start") start();
+      if (action==="pause") pause();
+      if (action==="reset") reset();
     });
   });
-}
-function doCalc(op, prev, curr) {
-  switch (op) {
-    case '+': return prev + curr;
-    case '−': return prev - curr;
-    case '×': return prev * curr;
-    case '÷': return curr === 0 ? 'PARADOX' : prev / curr;
-  }
-}
-function handleCalcOp(op) {
-  const curr = parseFloat(calcCurrent);
-  if (op === 'C') { calcCurrent = '0'; calcPrev = null; calcOp = null; calcReset = false; updateCalc(); return; }
-  if (op === '±') { calcCurrent = String(curr * -1); updateCalc(); return; }
-  if (op === '%') { calcCurrent = String(curr / 100); updateCalc(); return; }
-  if (op === '=') {
-    if (calcOp && calcPrev !== null) {
-      const res = doCalc(calcOp, parseFloat(calcPrev), curr);
-      if (res === 'PARADOX') { calcCurrent = res; calcReset = true; showNotification('Division by zero paradox.', 'error'); }
-      else {
-        calcCurrent = String(res).length > 12 ? String(res).toExponential(6) : String(res);
-        if (res === 42) showNotification('The answer has been found.', 'success');
+  const customRow=win.querySelector("#pomo-custom-row");
+  const customInput=win.querySelector("#pomo-custom-mins");
+  const customSetBtn=win.querySelector("#pomo-custom-set");
+  win.querySelectorAll(".pomo-tab").forEach((tab) => {
+    tab.addEventListener("click",()=>{
+      win.querySelectorAll(".pomo-tab").forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      pause();
+      if (tab.dataset.mode==="custom") {
+        customRow.style.display="flex";
+        return;
       }
-      calcPrev = null; calcOp = null; calcReset = true;
-    }
-    updateCalc(); return;
-  }
-
-  if (calcOp && !calcReset && calcCurrent !== 'PARADOX') {
-    const res = doCalc(calcOp, parseFloat(calcPrev), curr);
-    if (res === 'PARADOX') {
-      calcCurrent = res;
-      calcPrev = null;
-      calcOp = null;
-      calcReset = true;
-      showNotification('Division by zero paradox.', 'error');
-    } else {
-      calcPrev = String(res);
-      calcCurrent = String(res);
-    }
-  } else {
-    calcPrev = calcCurrent;
-  }
-  calcOp = op; calcReset = true;
-  updateCalc();
+      customRow.style.display ="none";
+      modeSeconds=parseInt(tab.dataset.mode);
+      totalSeconds=modeSeconds;
+      render();
+    });
+  });
+  customSetBtn.addEventListener("click", () => {
+    const mins = parseInt(customInput.value);
+    if (!mins || mins <= 0) return;
+    modeSeconds = mins * 60;
+    totalSeconds = modeSeconds;
+    render();
+  });
+  render();
 }
 
-function updateCalc() {
-  const d = document.getElementById('calc-current');
-  const h = document.getElementById('calc-history');
-  if (d) d.textContent = calcCurrent;
-  if (h) h.textContent = calcPrev !== null ? `${calcPrev} ${calcOp || ''}` : '';
+// Notes
+function getNotesHTML(){
+  return`
+    <div class="notes-toolbar">
+      <button class="notes-tool" data-cmd="bold"><b>B</b></button>
+      <button class="notes-tool" data-cmd="italic"><i>I</i></button>
+      <button class="notes-tool" data-cmd="underline"><u>U</u></button>
+    </div>
+    <div class="notes-textarea" contenteditable="true" data-placeholder="Type here..."></div>
+  `;
 }
-
-// music player
-let musicPlaylist=[];
-let currentTrackIdx=-1;
-let audioObjectUrl = null;
-function initMusic(){
-  const fileInput= document.getElementById('music-file-input');
-  const dropZone = document.getElementById('vinyl-drop-zone');
-  const record = document.getElementById('vinyl-record');
-  document.getElementById('m-upload')?.addEventListener('click',() => fileInput?.click());
-  document.getElementById('playlist-clear-btn')?.addEventListener('click', () => {
-    musicPlaylist=[]; currentTrackIdx= -1; stopMusic(true); renderPlaylist();
+function initNotes(win){
+  const textarea=win.querySelector(".notes-textarea");
+  textarea.innerHTML=loadFromStorage("nebula-notes", "");
+  win.querySelectorAll(".notes-tool").forEach((btn) => {
+    btn.addEventListener("click",()=>{
+      document.execCommand(btn.dataset.cmd);
+      textarea.focus();
+    });
   });
-  fileInput?.addEventListener('change',e => {
-    if(e.target.files.length>0) addToPlaylist(Array.from(e.target.files));
-  });
-
-  dropZone?.addEventListener('dragover', e=>{e.preventDefault(); record?.classList.add('drag-over');});
-  dropZone?.addEventListener('dragleave', () => record?.classList.remove('drag-over'));
-  dropZone?.addEventListener('drop', e=>{
-    record?.classList.remove('drag-over');
-    const audiofiles=Array.from(e.dataTransfer.files).filter(f=> f.type.startsWith('audio/'));
-    if(audiofiles.length>0) addToPlaylist(audiofiles);
-  });
-
-  document.getElementById('m-play')?.addEventListener('click',toggleMusic);
-  document.getElementById('m-prev')?.addEventListener('click', () => {
-    if (musicPlaylist.length > 0) playTrack(currentTrackIdx <= 0 ? musicPlaylist.length - 1 : currentTrackIdx - 1);
-  });
-  document.getElementById('m-next')?.addEventListener('click', () => {
-    if (musicPlaylist.length > 0) playTrack((currentTrackIdx + 1) % musicPlaylist.length);
-  });
-
-  const vol = lsFloat('nebula_music_volume', 0.8);
-  const volSlider = document.getElementById('music-volume');
-  if (volSlider) volSlider.value = vol;
-  volSlider?.addEventListener('input', e => {
-    if (audioGain) audioGain.gain.value = e.target.value / 100;
-    lsSet('nebula_music_volume', e.target.value);
-  });
-
-  document.querySelector('.progress-track')?.addEventListener('click', e=> {
-    if(!audioElement || !musicDuration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    audioElement.currentTime = ((e.clientX - rect.left) / rect.width) * musicDuration;
+  textarea.addEventListener("input",()=>{
+    saveToStorage("nebula-notes",textarea.innerHTML);
   });
 }
 
-function addToPlaylist(files) {
-  const startIdx = musicPlaylist.length;
-  files.forEach(file => {
-    musicPlaylist.push({ file, name: file.name.replace(/\.[^/.]+$/, '').toUpperCase(), duration: '...' });
-    const url = URL.createObjectURL(file);
-    const tmp = new Audio(url);
-    const finishMetadata = () => {
-      const track = musicPlaylist.find(t => t.file === file);
-      if (track) {
-        track.duration = `${Math.floor(tmp.duration / 60)}:${String(Math.floor(tmp.duration % 60)).padStart(2, '0')}`;
-        renderPlaylist();
-      }
-      URL.revokeObjectURL(url);
-    };
-    tmp.addEventListener('loadedmetadata', finishMetadata, { once: true });
-    tmp.addEventListener('error', () => URL.revokeObjectURL(url), { once: true });
-  });
-  renderPlaylist();
-  if (currentTrackIdx === -1 && musicPlaylist.length > 0) playTrack(startIdx);
-}
-
-function renderPlaylist(){
-  const list = document.getElementById('playlist-tracks');
-  const clearBtn=document.getElementById('playlist-clear-btn');
-  if(!list)return;
-  if (musicPlaylist.length === 0) {
-    if (clearBtn) clearBtn.style.display = 'none';
-    list.innerHTML = '<li class="playlist-empty">No music loaded</li>';
-    document.getElementById('track-name').textContent = 'NO TRACK SELECTED';
-    document.getElementById('track-artist').textContent = 'ADD MUSIC TO BEGIN';
-    return;
-  }
-  if (clearBtn) clearBtn.style.display = 'block';
-  list.innerHTML = '';
-  musicPlaylist.forEach((track, idx) => {
-    const li = document.createElement('li');
-    li.className = 'playlist-track' + (idx === currentTrackIdx ? ' active' : '');
-    li.innerHTML = `
-      <div class="track-info-left">
-        <span class="track-number">${idx + 1}.</span>
-        <span class="track-title">${track.name}</span>
+// Terminal
+function getTerminalHTML() {
+  return `
+    <div class="terminal">
+      <div class="terminal-output" id="terminal-output">Meridian Terminal — type "help" to see commands</div>
+      <div class="terminal-input-row">
+        <span class="terminal-prompt">&gt;</span>
+        <input type="text" class="terminal-input" id="terminal-input" autocomplete="off" />
       </div>
-      <div class="track-duration-right">
-        <span class="track-duration">${track.duration}</span>
-        <button class="track-remove" title="Remove">✕</button>
-      </div>`;
-    li.addEventListener('click', e => e.target.classList.contains('track-remove') ? (e.stopPropagation(), removeTrack(idx)) : playTrack(idx));
-    list.appendChild(li);
-  });
+    </div>
+  `;
 }
-
-function removeTrack(idx){
-  musicPlaylist.splice(idx,1);
-  if(musicPlaylist.length === 0){currentTrackIdx = -1; stopMusic(true);}
-  else if (idx === currentTrackIdx) playTrack(idx >= musicPlaylist.length ? 0 : idx);
-  else if (idx < currentTrackIdx) currentTrackIdx--;
-  renderPlaylist();
-}
-
-function playTrack(idx){
-  if(idx<0 || idx >= musicPlaylist.length) return;
-  const track = musicPlaylist[idx];
-  currentTrackIdx=idx;
-  renderPlaylist();
-  const ctx = getAudioCtx();
-  if(ctx.state === 'suspended') ctx.resume();
-  stopMusic(false);
-  if (audioElement) {
-    audioElement.pause();
-    audioElement.src = '';
+function initTerminal(win) {
+  const output = win.querySelector("#terminal-output");
+  const input = win.querySelector("#terminal-input");
+  const commands = {
+    help: () => "Commands: help, clear, date, whoami, apps, open <app>, theme <color>, joke, echo <text>",
+    clear: () => { output.innerHTML = ""; return null; },
+    date: () => new Date().toString(),
+    whoami: () => "guest@meridian",
+    apps: () => Object.keys(apps).join(", "),
+    open: (args) => {
+      const target = args[0];
+      if (!target || !apps[target]) return `unknown app: ${target || "(none given)"}`;
+      openWindow(target);
+      setTimeout(() => {
+        if (openWindows[target]) bringToFront(openWindows[target]);
+      }, 0);
+      return `opening ${target}...`;
+    },
+    theme: (args) => {
+      const color = args[0];
+      if (!color) return "usage: theme <hex color, e.g. #4d8dff>";
+      const root = document.documentElement.style;
+      root.setProperty("--accent", color);
+      root.setProperty("--green", color);
+      root.setProperty("--amber", color);
+      root.setProperty("--blue", color);
+      return `theme set to ${color}`;
+    },
+    echo: (args) => args.join(" ") || "",
+    joke: () => {
+      const jokes = [
+        "Why don't eggs tell jokes? They'd crack each other up.",
+        "I accidentally swallowed some food coloring. The doctor says I'm okay, but I feel like I've dyed a little inside.",
+        "I have a joke about construction, but I'm still working on it.",
+        "Why did the tomato turn red? Because it saw the salad dressing.",
+        "I was going to tell a time-traveling joke, but you didn't like it.",
+        "I ordered a chicken and an egg online. I'll let you know which comes first.",
+        "My neighbor knocked on my door at 2 AM. Can you believe that? Luckily, I was still awake playing drums.",
+        "My wallet is like an onion. Opening it makes me cry.",
+        "I hate when people say age is just a number. Age is clearly a word.",
+      ];
+      return jokes[Math.floor(Math.random() * jokes.length)];
+    },
+  };
+  function printLine(text) {
+    const line = document.createElement("div");
+    line.textContent = text;
+    output.appendChild(line);
+    output.scrollTop = output.scrollHeight;
   }
-  if (audioObjectUrl) {
-    URL.revokeObjectURL(audioObjectUrl);
-  }
-  audioObjectUrl = URL.createObjectURL(track.file);
-  audioElement = new Audio(audioObjectUrl);
-  audioElement.crossOrigin='anonymous';
-  if (audioSource) audioSource.disconnect();
-  audioSource = ctx.createMediaElementSource(audioElement);
-  if (!audioAnalyser) { audioAnalyser = ctx.createAnalyser(); audioAnalyser.fftSize = 64; }
-  if (!audioGain) audioGain = ctx.createGain();
-  const volSlider = document.getElementById('music-volume');
-  audioGain.gain.value = volSlider ? volSlider.value / 100 : 0.7;
-  audioSource.connect(audioAnalyser);
-  audioAnalyser.connect(audioGain);
-  audioGain.connect(ctx.destination);
-  const nameE1 = document.getElementById('track-name');
-  if (nameE1) nameE1.textContent = track.name;
-  const artistE1 = document.getElementById('track-artist');
-  if(artistE1) artistE1.textContent = 'LOCAL FILE';
-  audioElement.play().then(() => {
-    isAudioPlaying=true;
-    const btn = document.getElementById('m-play');
-    if(btn) btn.textContent = '⏸';
-    document.getElementById('vinyl-record')?.classList.add('playing');
-    document.getElementById('vinyl-arm')?.classList.add('playing');
-    startVisualizer();
-    updateProgress();
-  }).catch(() => {});
-  audioElement.addEventListener('ended', () => playTrack((currentTrackIdx + 1) % musicPlaylist.length));
-  audioElement.addEventListener('loadedmetadata', () => musicDuration = audioElement.duration);
-}
+  input.addEventListener("keydown",(e)=>{
+    if (e.key!=="Enter")return;
+    const typed=input.value.trim();
+    if (typed==="") return;
 
-function toggleMusic(){
-  if(!audioElement || musicPlaylist.length === 0){document.getElementById('music-file-input')?.click(); return;}
-  const ctx = getAudioCtx();
-  if(ctx.state === 'suspended') ctx.resume();
-  if (isAudioPlaying) {
-    audioElement.pause();
-    isAudioPlaying = false;
-    document.getElementById('m-play').textContent = '▶';
-    document.getElementById('vinyl-record')?.classList.remove('playing');
-    document.getElementById('vinyl-arm')?.classList.remove('playing');
-    if (musicAnimationId) cancelAnimationFrame(musicAnimationId);
-  } else {
-    audioElement.play();
-    isAudioPlaying = true;
-    document.getElementById('m-play').textContent = '⏸';
-    document.getElementById('vinyl-record')?.classList.add('playing');
-    document.getElementById('vinyl-arm')?.classList.add('playing');
-    startVisualizer();
-    updateProgress();
-  }
-}
+    printLine("> " +typed);
 
-function updateProgress(){
-  if(!isAudioPlaying || !audioElement) return;
-  const fill = document.getElementById('progress-fill');
-  if(fill && musicDuration) fill.style.width = (audioElement.currentTime / musicDuration *100) + '%';
-  requestAnimationFrame(updateProgress);
-}
+    const parts=typed.split(" ");
+    const commandName= parts[0].toLowerCase();
+    const args=parts.slice(1);
 
-function startVisualizer() {
-  if (!audioAnalyser) return;
-  const bars = document.querySelectorAll('.viz-bar');
-  const data = new Uint8Array(audioAnalyser.frequencyBinCount);
-  function draw() {
-    if (!isAudioPlaying) return;
-    audioAnalyser.getByteFrequencyData(data);
-    bars.forEach((bar, i) => {
-      const val = data[Math.floor((i / bars.length) * data.length)];
-      bar.style.height = (4 + (val / 255) * 46) + 'px';
-      bar.classList.remove('active');
-    });
-    musicAnimationId = requestAnimationFrame(draw);
-  }
-  draw();
-}
-
-function stopMusic(fullReset = true) {
-  isAudioPlaying = false;
-  if (audioElement) { audioElement.pause(); if (fullReset) audioElement.currentTime = 0; }
-  if (musicAnimationId) cancelAnimationFrame(musicAnimationId);
-  const btn = document.getElementById('m-play');
-  if (btn) btn.textContent = '▶';
-  document.getElementById('vinyl-record')?.classList.remove('playing');
-  document.getElementById('vinyl-arm')?.classList.remove('playing');
-  if (fullReset) {
-    const fill = document.getElementById('progress-fill');
-    if (fill) fill.style.width = '0%';
-    document.querySelectorAll('.viz-bar').forEach(b => { b.style.height = '6px'; b.classList.add('active'); });
-  }
-}
-
-// notes
-function initNotes() {
-  const editor = document.querySelector('.notes-editor');
-  if (!editor) return;
-  const saved = lsGet('nebula_notes_content');
-  if (saved !== null) {
-    editor.innerHTML = saved;
-  }
-  const win = document.getElementById('window-notes');
-  const title = win?.querySelector('.window-title span:last-child');
-  if (saved !== null && title) {
-    title.textContent = 'Notes';
-  }
-  editor.addEventListener('input', () => {
-    lsSet('nebula_notes_content', editor.innerHTML);
-    if (title) {
-      title.textContent = 'Notes';
+    const commandFn = commands[commandName];
+    if (commandFn) {
+      const result = commandFn(args);
+      if (result !== null) printLine(result);
+    } else {
+      printLine(`command not found: ${typed}`);
     }
+    input.value = "";
+  });
+}
+
+// Music
+function getMusicHTML() {
+  return `
+    <div class="music-player">
+      <div class="music-dropzone" id="music-dropzone">
+        <input type="file" id="music-file-input" accept="audio/*" multiple hidden />
+        <span>Drop audio files here, or click to choose</span>
+      </div>
+      <div class="vinyl-wrap">
+        <div class="vinyl" id="music-vinyl">
+          <div class="vinyl-label">&#9835;</div>
+        </div>
+      </div>
+      <div class="music-title" id="music-title">No track loaded</div>
+      <div class="music-artist" id="music-artist">—</div>
+      <div class="music-progress-row">
+        <span class="music-time" id="music-current">0:00</span>
+        <input type="range" class="music-progress" id="music-progress" min="0" max="100" value="0" />
+        <span class="music-time" id="music-duration">0:00</span>
+      </div>
+      <div class="music-controls">
+        <button class="music-btn" id="music-prev">&#9664;&#9664;</button>
+        <button class="music-btn music-play" id="music-play">&#9654;</button>
+        <button class="music-btn" id="music-next">&#9654;&#9654;</button>
+      </div>
+      <div class="music-volume-row">
+        <span class="music-vol-icon">&#128266;</span>
+        <input type="range" class="music-volume" id="music-volume" min="0" max="100" value="70" />
+      </div>
+      <div class="music-playlist" id="music-playlist"></div>
+    </div>
+  `;
+}
+
+function initMusic(win){
+  const audio =new Audio();
+  musicAudioRef=audio;
+
+  let tracklist=[];
+  let currentIndex=0;
+
+  const dropzone=win.querySelector("#music-dropzone");
+  const fileInput=win.querySelector("#music-file-input");
+  const vinyl=win.querySelector("#music-vinyl");
+  const titleEl=win.querySelector("#music-title");
+  const artistEl=win.querySelector("#music-artist");
+  const playBtn=win.querySelector("#music-play");
+  const progressEl=win.querySelector("#music-progress");
+  const currentTimeEl= win.querySelector("#music-current");
+  const durationEl =win.querySelector("#music-duration");
+  const playlistEl=win.querySelector("#music-playlist");
+  const volumeSlider =win.querySelector("#music-volume");
+
+  function formatTime(seconds) {
+    const m =Math.floor(seconds / 60);
+    const s =Math.floor(seconds % 60);
+    return m +":" + s.toString().padStart(2, "0");
+  }
+  function addFiles(fileList) {
+    Array.from(fileList).forEach((file) => {
+      if (!file.type.startsWith("audio/")) return;
+      tracklist.push({
+        title: file.name.replace(/\.[^/.]+$/, ""),
+        src: URL.createObjectURL(file),
+      });
+    });
+    renderPlaylist();
+    if (tracklist.length === fileList.length) loadTrack(0);
+  }
+
+  function renderPlaylist() {
+    playlistEl.innerHTML = "";
+    tracklist.forEach((track, i) => {
+      const item = document.createElement("div");
+      item.className = "music-playlist-item" + (i === currentIndex ? " active" : "");
+      item.textContent = track.title;
+      item.addEventListener("click", () => { loadTrack(i); play(); });
+      playlistEl.appendChild(item);
+    });
+  }
+  function loadTrack(index) {
+    if (!tracklist[index]) return;
+    currentIndex = index;
+    const track = tracklist[index];
+    audio.src = track.src;
+    titleEl.textContent = track.title;
+    artistEl.textContent = `Track ${index + 1} of ${tracklist.length}`;
+    progressEl.value = 0;
+    currentTimeEl.textContent = "0:00";
+    renderPlaylist();
+  }
+  function play() {
+    if (!audio.src) return;
+    audio.play();
+    playBtn.innerHTML = "&#10074;&#10074;";
+    vinyl.classList.add("spinning");
+    updateNowPlaying(tracklist[currentIndex].title, true);
+  }
+  function pause() {
+    audio.pause();
+    playBtn.innerHTML = "&#9654;";
+    vinyl.classList.remove("spinning");
+    updateNowPlaying(tracklist[currentIndex].title, false);
+  }
+  playBtn.addEventListener("click", () => { if (audio.paused) play(); else pause(); });
+  win.querySelector("#music-next").addEventListener("click", () => {
+    if (tracklist.length === 0) return;
+    loadTrack((currentIndex + 1) % tracklist.length);
+    play();
   });
 
-  document.querySelectorAll('.note-tool').forEach(tool => {
-    tool.addEventListener('click', () => {
-      document.execCommand(tool.dataset.cmd, false, null);
-      editor.focus();
-      lsSet('nebula_notes_content', editor.innerHTML);
-      if (title) {
-        title.textContent = 'Notes';
-      }
-    });
+  win.querySelector("#music-prev").addEventListener("click", () => {
+    if (tracklist.length === 0) return;
+    loadTrack((currentIndex - 1 + tracklist.length) % tracklist.length);
+    play();
+  });
+
+  audio.addEventListener("timeupdate", () => {
+    if (!audio.duration) return;
+    progressEl.value = (audio.currentTime / audio.duration) * 100;
+    currentTimeEl.textContent = formatTime(audio.currentTime);
+  });
+
+  audio.addEventListener("loadedmetadata", () => {
+    durationEl.textContent = formatTime(audio.duration);
+  });
+  progressEl.addEventListener("input", () => {
+    if (!audio.duration) return;
+    audio.currentTime = (progressEl.value / 100) * audio.duration;
+  });
+  audio.addEventListener("ended", () => {
+    if (tracklist.length === 0) return;
+    loadTrack((currentIndex + 1) % tracklist.length);
+    play();
+  });
+
+  audio.volume = volumeSlider.value / 100;
+  volumeSlider.addEventListener("input", () => { audio.volume = volumeSlider.value / 100; });
+
+  dropzone.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", () => addFiles(fileInput.files));
+  dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("drag-over"); });
+  dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag-over"));
+  dropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("drag-over");
+    addFiles(e.dataTransfer.files);
   });
 }
 
 // paint
-let paintCtx = null;
-let isPainting = false;
-let paintColor = '#000000';
-let paintSize = 4;
-let currentPaintTool = 'brush';
-let paintStartX = 0;
-let paintStartY = 0;
-let paintHistory = [];
-let paintTempImage = null;
-let paintListenersBound = false;
+function getPaintHTML() {
+  return `
+    <div class="paint">
+      <div class="paint-toolbar">
+        <div class="paint-swatches">
+          <button class="paint-swatch active" data-color="#efe6d8" style="background:#efe6d8"></button>
+          <button class="paint-swatch" data-color="#c9583f" style="background:#c9583f"></button>
+          <button class="paint-swatch" data-color="#7a9c81" style="background:#7a9c81"></button>
+          <button class="paint-swatch" data-color="#5f93a0" style="background:#5f93a0"></button>
+          <button class="paint-swatch" data-color="#d9a441" style="background:#d9a441"></button>
+          <span class="paint-divider"></span>
+          <label class="paint-custom-color" title="Custom color">
+            <input type="color" class="paint-color" id="paint-color" value="#efe6d8" />
+          </label>
+        </div>
+        <div class="paint-tools">
+          <button class="paint-tool active" data-tool="pencil" title="Pencil">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 20l1-4L16 5l3 3L8 19l-4 1z"/></svg>
+          </button>
+          <button class="paint-tool" data-tool="line" title="Line">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 19L19 5"/></svg>
+          </button>
+          <button class="paint-tool" data-tool="rect" title="Box">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14"/></svg>
+          </button>
+          <button class="paint-tool" data-tool="circle" title="Circle">
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8"/></svg>
+          </button>
+        </div>
+        <input type="range" class="paint-size" id="paint-size" min="1" max="30" value="4" />
+        <button class="paint-btn" id="paint-undo" title="Undo">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>
+        </button>
+        <button class="paint-btn" id="paint-clear" title="Clear">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>
+        </button>
+      </div>
+      <canvas class="paint-canvas" id="paint-canvas"></canvas>
+    </div>
+  `;
+}
 
-function initPaint() {
-  const canvas = document.getElementById('paint-canvas');
-  if (!canvas) return;
-  paintCtx = canvas.getContext('2d');
+function initPaint(win) {
+  const canvas=win.querySelector("#paint-canvas");
+  const ctx=canvas.getContext("2d");
+  const colorPicker=win.querySelector("#paint-color");
+  const sizePicker=win.querySelector("#paint-size");
+  const clearBtn=win.querySelector("#paint-clear");
+  const undoBtn=win.querySelector("#paint-undo");
 
-  function resizePaintCanvas() {
-    const parent = canvas.parentElement;
-    if (!parent) return;
-    const width = parent.clientWidth;
-    const height = parent.clientHeight;
-    if (!width || !height) return;
-    const wasInitialized = canvas.dataset.ready === 'true';
-    if (wasInitialized) {
-      const savedCanvas = document.createElement('canvas');
-      savedCanvas.width = canvas.width;
-      savedCanvas.height = canvas.height;
-      savedCanvas.getContext('2d').drawImage(canvas, 0, 0);
-      canvas.width = width;
-      canvas.height = height;
-      paintCtx.drawImage(savedCanvas, 0, 0);
-      return;
+  let currentColor=colorPicker.value;
+  let currentTool="pencil";
+  let isDrawing=false;
+  let startX=0, startY = 0, lastX = 0, lastY = 0;
+
+  let undoStack=[];
+  const MAX_UNDO=20;
+  function saveUndoSnapshot() {
+    undoStack.push(canvas.toDataURL());
+    if (undoStack.length > MAX_UNDO) undoStack.shift();
+  }
+  function paintBackground() {
+    ctx.fillStyle = "#1f1a16";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    const savedImage = canvas.width > 0 ? canvas.toDataURL() : null;
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    paintBackground();
+    if (savedImage) {
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0);
+      img.src = savedImage;
     }
-    canvas.width = width;
-    canvas.height = height;
-    canvas.dataset.ready = 'true';
-    const stored = lsGet('nebula_paint_data');
-    if (stored) {
-      const image = new Image();
-      image.onload = () => {
-        paintCtx.drawImage(image, 0, 0);
-        paintHistory = [stored];
-      };
-      image.src = stored;
-      return;
+  }
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  function drawShape(x, y) {
+    ctx.strokeStyle = currentColor;
+    ctx.lineWidth = sizePicker.value;
+    ctx.lineCap = "round";
+    if (currentTool === "line") {
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(x, y);
+      ctx.stroke();
     }
-    paintCtx.fillStyle = '#fff';
-    paintCtx.fillRect(0, 0, canvas.width, canvas.height);
-    savePaintState();
-  }
-  requestAnimationFrame(() => {
-    requestAnimationFrame(resizePaintCanvas);
-  });
-  if (paintListenersBound) return;
-  paintListenersBound = true;
-  if (canvas.parentElement) {
-    const observer = new ResizeObserver(() => {
-      requestAnimationFrame(resizePaintCanvas);
-    });
-    observer.observe(canvas.parentElement);
-  }
-  canvas.addEventListener('mousedown', startPainting);
-  canvas.addEventListener('mousemove', drawPaint);
-  canvas.addEventListener('mouseleave', stopPainting);
-  document.querySelectorAll('.paint-color').forEach(button => {
-    button.addEventListener('click', () => {
-      document.querySelectorAll('.paint-color').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      button.classList.add('active');
-      paintColor = button.dataset.color;
-    });
-  });
-
-  document.getElementById('brush-size')?.addEventListener('input', e => {
-    paintSize = Number(e.target.value);
-  });
-
-  document.getElementById('paint-clear')?.addEventListener('click', () => {
-    paintCtx.fillStyle = '#fff';
-    paintCtx.fillRect(0, 0, canvas.width, canvas.height);
-    savePaintState();
-  });
-
-  document.querySelectorAll('.paint-btn[data-tool]').forEach(button => {
-    button.addEventListener('click', () => {
-      document.querySelectorAll('.paint-btn[data-tool]').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      button.classList.add('active');
-      currentPaintTool = button.dataset.tool;
-    });
-  });
-
-  document.getElementById('paint-undo')?.addEventListener('click', undoPaint);
-  document.getElementById('paint-save')?.addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.download = 'nebula_art.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    showNotification('Reality Archive Saved', 'success');
-  });
-  document.addEventListener('keydown', e => {
-    const win = document.getElementById('window-paint');
-    if (e.ctrlKey && e.key === 'z' && win?.classList.contains('active')) {
-      e.preventDefault();
-      undoPaint();
+    if (currentTool === "rect") {
+      ctx.strokeRect(startX, startY, x - startX, y - startY);
     }
-  });
-}
-function savePaintState() {
-  const canvas = document.getElementById('paint-canvas');
-  if (!canvas) return;
-  if (paintHistory.length >= 15) {
-    paintHistory.shift();
-  }
-  const data = canvas.toDataURL();
-  paintHistory.push(data);
-  lsSet('nebula_paint_data', data);
-}
-function undoPaint() {
-  if (paintHistory.length <= 1) return;
-  paintHistory.pop();
-  const previous = paintHistory[paintHistory.length - 1];
-  const canvas = document.getElementById('paint-canvas');
-  if (!canvas || !paintCtx) return;
-  const image = new Image();
-  image.onload = () => {
-    paintCtx.clearRect(0, 0, canvas.width, canvas.height);
-    paintCtx.drawImage(image, 0, 0);
-    lsSet('nebula_paint_data', previous);
-  };
-  image.src = previous;
-}
-function getPaintCoords(e, canvas) {
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: (e.clientX - rect.left) * (canvas.width / rect.width),
-    y: (e.clientY - rect.top) * (canvas.height / rect.height)
-  };
-}
-
-function startPainting(e) {
-  const canvas = e.target;
-  const coords = getPaintCoords(e, canvas);
-  isPainting = true;
-  paintStartX = coords.x;
-  paintStartY = coords.y;
-  paintTempImage = new Image();
-  paintTempImage.src = canvas.toDataURL();
-  if (currentPaintTool === 'brush') {
-    paintCtx.beginPath();
-    paintCtx.moveTo(coords.x, coords.y);
-    drawPaint(e);
-  }
-}
-
-function stopPainting() {
-  if (!isPainting) return;
-  isPainting = false;
-  paintCtx?.beginPath();
-  savePaintState();
-}
-
-document.addEventListener('mouseup', stopPainting);
-function drawPaint(e) {
-  if (!isPainting) return;
-  const canvas = e.target;
-  const coords = getPaintCoords(e, canvas);
-  paintCtx.lineWidth = paintSize;
-  paintCtx.lineCap = 'round';
-  paintCtx.lineJoin = 'round';
-  paintCtx.strokeStyle = paintColor;
-  paintCtx.fillStyle = paintColor;
-  if (currentPaintTool === 'brush') {
-    paintCtx.lineTo(coords.x, coords.y);
-    paintCtx.stroke();
-    paintCtx.beginPath();
-    paintCtx.moveTo(coords.x, coords.y);
-    return;
-  }
-  if (paintTempImage?.complete) {
-    paintCtx.clearRect(0, 0, canvas.width, canvas.height);
-    paintCtx.drawImage(paintTempImage, 0, 0);
-  }
-  paintCtx.beginPath();
-  if (currentPaintTool === 'line') {
-    paintCtx.moveTo(paintStartX, paintStartY);
-    paintCtx.lineTo(coords.x, coords.y);
-  } else if (currentPaintTool === 'rect') {
-    paintCtx.rect(
-      paintStartX,
-      paintStartY,
-      coords.x - paintStartX,
-      coords.y - paintStartY
-    );
-  } else if (currentPaintTool === 'circle') {
-    const dx = coords.x - paintStartX;
-    const dy = coords.y - paintStartY;
-    const radius = Math.sqrt(dx * dx + dy * dy);
-    paintCtx.arc( paintStartX, paintStartY, radius, 0, 2 * Math.PI);
-  }
-  paintCtx.stroke();
-}
-
-// snake
-let gCtx = null;
-let snake = [], food = {};
-let gDir = 'right', gNext = 'right';
-let gScore = 0, gHigh = lsInt('nebula_snake_high', 0);
-let gLoop = null, gSpeed = 130, gRunning = false;
-let gameListenersBound = false;
-
-function initGame(){
-  const canvas = document.getElementById('game-canvas');
-  if(!canvas) return;
-  const wrap = canvas.parentElement;
-  const size = Math.floor(Math.min(wrap.clientWidth - 6, wrap.clientHeight - 6, 300) / 15) *15;
-  canvas.width =size;
-  canvas.height=size;
-  gCtx=canvas.getContext('2d');
-  const highE1 = document.getElementById('game-high');
-  if(highE1) highE1.textContent = gHigh;
-  drawGame ();
-
-  if (gameListenersBound) return;
-  gameListenersBound = true;
-  document.getElementById('game-start')?.addEventListener('click', startGame);
-  document.getElementById('game-stop')?.addEventListener('click', stopGame);
-  document.addEventListener('keydown', e => {
-    if (!gRunning) return;
-    const map = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
-    const opp = { up: 'down', down: 'up', left: 'right', right: 'left' };
-    if (map[e.key] && gDir !== opp[map[e.key]]) gNext = map[e.key];
-  });
-}
-
-function resetGameUI(){
-  gScore = 0;
-  const score = document.getElementById('game-score');
-  if(score) score.textContent = '0';
-  document.getElementById('game-start').style.display = 'inline-block';
-  document.getElementById('game-stop').style.display = 'none';
-  if(gLoop) {clearInterval(gLoop); gLoop=null;}
-  gRunning = false;
-}
-
-function startGame(){
-  if(gRunning) return;
-  const canvas = document.getElementById('game-canvas');
-  if(!canvas) return;
-  const tiles = 15;
-  const grid = Math.floor(canvas.width / tiles);
-  snake = [{x: Math.floor(tiles/2), y: Math.floor(tiles/2)}];
-  gDir = 'right'; gNext='right'; gScore=0; gSpeed=130; gRunning = true;
-  document.getElementById('game-score').textContent ='0';
-  document.getElementById('game-start').style.display = 'none';
-  document.getElementById('game-stop').style.display = 'inline-block';
-  placeFood(tiles);
-  if (gLoop) clearInterval(gLoop);
-  gLoop = setInterval(() => gameStep(tiles,grid), gSpeed);
-}
-
-function stopGame() {
-  gRunning = false;
-  if (gLoop) { clearInterval(gLoop); gLoop = null; }
-  document.getElementById('game-start').style.display = 'inline-block';
-  document.getElementById('game-stop').style.display = 'none';
-  snake = [];
-  drawGame();
-}
-
-function placeFood(tiles){
-  do{ food = { x:Math.floor(Math.random() * tiles), y:Math.floor(Math.random()*tiles)};}
-  while (snake.some(s => s.x === food.x && s.y === food.y));
-}
-function gameStep(tiles, grid) {
-  gDir = gNext;
-  const head = { ...snake[0] };
-  if (gDir === 'up') head.y--;
-  else if (gDir === 'down') head.y++;
-  else if (gDir === 'left') head.x--;
-  else head.x++;
-  if (head.x < 0) head.x = tiles - 1;
-  if (head.x >= tiles) head.x = 0;
-  if (head.y < 0) head.y = tiles - 1;
-  if (head.y >= tiles) head.y = 0;
-  if (snake.some(s => s.x === head.x && s.y === head.y)) {
-    gameOver();
-    showNotification('Temporal Worm terminated.', 'warning');
-    return;
-  }
-  snake.unshift(head);
-  if(head.x === food.x && head.y === food.y){
-    gScore +=10;
-    document.getElementById('game-score').textContent = gScore;
-    if(gScore > gHigh){
-      gHigh = gScore;
-      const highEl = document.getElementById('game-high');
-      if(highEl) highEl.textContent = gHigh;
-      lsSet('nebula_snake_high' , gHigh);
+    if (currentTool === "circle") {
+      const radius = Math.hypot(x - startX, y - startY);
+      ctx.beginPath();
+      ctx.arc(startX, startY, radius, 0, Math.PI * 2);
+      ctx.stroke();
     }
-    placeFood(tiles);
-    if(gSpeed>60) {gSpeed -=3; clearInterval(gLoop); gLoop = setInterval(() => gameStep(tiles,grid), gSpeed);}
-  } else {
-    snake.pop();
   }
-  drawGame(grid);
-}
 
-function drawGame(grid = 15) {
-  if (!gCtx) return;
-  const canvas = gCtx.canvas;
-  gCtx.fillStyle = '#191A1F';
-  gCtx.fillRect(0, 0, canvas.width, canvas.height);
-  gCtx.strokeStyle = 'rgba(255,255,255,0.03)';
-  gCtx.lineWidth = 1;
-  for (let i = 0; i < canvas.width; i += grid) {
-    gCtx.beginPath(); gCtx.moveTo(i, 0); gCtx.lineTo(i, canvas.height); gCtx.stroke();
-    gCtx.beginPath(); gCtx.moveTo(0, i); gCtx.lineTo(canvas.width, i); gCtx.stroke();
+  function startDraw(e) {
+    isDrawing = true;
+    const pos = getPos(e);
+    startX = pos.x; startY = pos.y; lastX = pos.x; lastY = pos.y;
+    saveUndoSnapshot();
   }
-  snake.forEach((seg, i) => {
-    gCtx.fillStyle = i === 0 ? '#00FFAB' : '#38E54D';
-    gCtx.fillRect(seg.x * grid + 1, seg.y * grid + 1, grid - 2, grid - 2);
-    if (i === 0) {
-      gCtx.fillStyle = '#000';
-      gCtx.fillRect(seg.x * grid + 4, seg.y * grid + 4, 3, 3);
-      gCtx.fillRect(seg.x * grid + 9, seg.y * grid + 4, 3, 3);
-    }
-  });
 
-  if (food.x !== undefined) {
-    gCtx.fillStyle = '#FF004D';
-    gCtx.beginPath();
-    gCtx.arc(food.x * grid + grid / 2, food.y * grid + grid / 2, grid / 2 - 2, 0, Math.PI * 2);
-    gCtx.fill();
-  }
-}
-
-function gameOver() {
-  gRunning = false;
-  clearInterval(gLoop);
-  gLoop = null;
-  gCtx.fillStyle = 'rgba(255,0,77,0.3)';
-  gCtx.fillRect(0, 0, gCtx.canvas.width, gCtx.canvas.height);
-  setTimeout(() => {
-    document.getElementById('game-start').style.display = 'inline-block';
-    document.getElementById('game-stop').style.display = 'none';
-    snake = [];
-    drawGame();
-  }, 1000);
-}
-
-// toasts
-function showNotification(msg, type = 'success') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
-  const icons = { success: '💾', error: '⚠️', warning: '⚡' };
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.innerHTML = `<span class="toast-icon">${icons[type] || '🔔'}</span> <span class="toast-content">${msg}</span>`;
-  container.appendChild(toast);
-  setTimeout(() => { toast.classList.add('leaving'); toast.addEventListener('animationend', () => toast.remove()); }, 5000);
-}
-
-// pomodoro ( focus timer )
-const POMO_DURATIONS = { focus: 25 * 60, short: 5 * 60, long: 15 * 60, custom: 10 * 60 };
-const POMO_LABELS = { focus: 'FOCUS SESSION', short: 'SHORT BREAK', long: 'LONG BREAK', custom: 'CUSTOM TIMER' };
-let pomoState = {
-  mode: 'focus',
-  timeLeft: POMO_DURATIONS.focus,
-  totalTime: POMO_DURATIONS.focus,
-  isRunning: false,
-  sessions: 0,
-  interval: null,
-  customType: 'focus',
-};
-
-function pomoFormatTime(secs) {
-  const h = Math.floor(secs / 3600);
-  const m = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
-  const s = String(secs % 60).padStart(2, '0');
-  return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
-}
-
-function pomoUpdateDisplay() {
-  const display = document.getElementById('pomo-display');
-  const label = document.getElementById('pomo-label');
-  const progress = document.getElementById('pomo-progress');
-  const sessions = document.getElementById('pomo-sessions');
-  if (display) display.textContent = pomoFormatTime(pomoState.timeLeft);
-  if (label) label.textContent = POMO_LABELS[pomoState.mode];
-  if (progress) progress.style.width = (pomoState.timeLeft / pomoState.totalTime * 100) + '%';
-  if (sessions) sessions.textContent = pomoState.sessions;
-}
-
-function pomoBeep() {
-  try{
-    const ctx =new(window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain =ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.frequency.value=880; osc.type='sine';
-    gain.gain.setValueAtTime(0.3,ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001 , ctx.currentTime + 0.8);
-    osc.start(); osc.stop(ctx.currentTime + 0.8); 
-  } catch {}
-}
-
-function pomoTick() {
-  if (pomoState.timeLeft <= 0) {
-    clearInterval(pomoState.interval);
-    pomoState.interval = null;
-    pomoState.isRunning = false;
-    pomoBeep();
-    document.getElementById('pomo-start').textContent = 'START';
-    const isFocus = pomoState.mode === 'focus' || (pomoState.mode === 'custom' && pomoState.customType === 'focus');
-    if (isFocus) {
-      pomoState.sessions++;
-      showNotification('Focus session complete! Take a break. 🎉', 'success');
-      pomoSetMode('short');
+  function draw(e) {
+    if (!isDrawing) return;
+    const pos = getPos(e);
+    if (currentTool === "pencil") {
+      ctx.strokeStyle = currentColor;
+      ctx.lineWidth = sizePicker.value;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      lastX = pos.x; lastY = pos.y;
     } else {
-      showNotification('Break over! Time to focus. ⚡', 'warning');
-      pomoSetMode('focus');
+      const snapshot = undoStack[undoStack.length - 1];
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        drawShape(pos.x, pos.y);
+      };
+      img.src = snapshot;
     }
-    return;
   }
-  pomoState.timeLeft--;
-  pomoUpdateDisplay();
-}
 
-function pomoStart(){
-  const btn = document.getElementById('pomo-start');
-  if(pomoState.isRunning){
-    clearInterval(pomoState.interval);
-    pomoState.interval=null;
-    pomoState.isRunning=false;
-    if(btn) btn.textContent = 'RESUME';
-  } else {
-    pomoState.isRunning = true;
-    pomoState.interval = setInterval(pomoTick,1000);
-    if (btn) btn.textContent = 'PAUSE';
+  function stopDraw() {
+    if (isDrawing) savePaintState();
+    isDrawing = false;
   }
-}
 
-function pomoReset() {
-  clearInterval(pomoState.interval);
-  pomoState.interval = null;
-  pomoState.isRunning = false;
-  pomoState.timeLeft = pomoState.totalTime;
-  document.getElementById('pomo-start').textContent = 'START';
-  pomoUpdateDisplay();
-}
+  canvas.addEventListener("mousedown", startDraw);
+  canvas.addEventListener("mousemove", draw);
+  canvas.addEventListener("mouseup", stopDraw);
+  canvas.addEventListener("mouseleave", stopDraw);
 
-function pomoSetMode(mode) {
-  clearInterval(pomoState.interval);
-  pomoState.interval = null;
-  pomoState.isRunning = false;
-  pomoState.mode = mode;
-  pomoState.timeLeft = POMO_DURATIONS[mode];
-  pomoState.totalTime = POMO_DURATIONS[mode];
-  document.querySelectorAll('.pomo-mode-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
-  document.getElementById('pomo-start').textContent = 'START';
-  pomoUpdateDisplay();
-}
-
-function pomoSwitchMode(mode) {
-  if (mode === 'custom') {
-    const overlay = document.getElementById('pomo-custom-overlay');
-    const hIn = document.getElementById('pomo-custom-h');
-    const mIn = document.getElementById('pomo-custom-m');
-    const sIn = document.getElementById('pomo-custom-s');
-    if (overlay && hIn && mIn && sIn) {
-      const t = POMO_DURATIONS.custom || 600;
-      hIn.value = Math.floor(t / 3600);
-      mIn.value = Math.floor((t % 3600) / 60);
-      sIn.value = t % 60;
-      overlay.style.display = 'flex';
-      setTimeout(() => mIn.focus(), 100);
-    }
-    return;
-  }
-  pomoSetMode(mode);
-}
-
-function initPomodoro() {
-  document.getElementById('pomo-start')?.addEventListener('click', pomoStart);
-  document.getElementById('pomo-reset')?.addEventListener('click', pomoReset);
-  document.querySelectorAll('.pomo-mode-btn').forEach(btn => btn.addEventListener('click', () => pomoSwitchMode(btn.dataset.mode)));
-  document.getElementById('pomo-custom-cancel')?.addEventListener('click', () => {
-    document.getElementById('pomo-custom-overlay').style.display = 'none';
-  });
-  document.getElementById('pomo-custom-set')?.addEventListener('click', () => {
-    const h = parseInt(document.getElementById('pomo-custom-h').value) || 0;
-    const m = parseInt(document.getElementById('pomo-custom-m').value) || 0;
-    const s = parseInt(document.getElementById('pomo-custom-s').value) || 0;
-    const total = h * 3600 + m * 60 + s;
-    if (total <= 0) return;
-    const isBreak = document.getElementById('ctype-break')?.checked;
-    pomoState.customType = isBreak ? 'break' : 'focus';
-    POMO_LABELS.custom = isBreak ? 'CUSTOM BREAK' : 'CUSTOM FOCUS';
-    POMO_DURATIONS.custom = total;
-    document.getElementById('pomo-custom-overlay').style.display = 'none';
-    pomoSetMode('custom');
-  });
-  pomoUpdateDisplay();
-}
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('sign-in-btn')?.addEventListener('click', enterDesktop);
-
-  document.querySelectorAll('.window').forEach(win => {
-    makeDraggable(win);
-    win.addEventListener('mousedown', () => bringToFront(win));
-    win.addEventListener('touchstart', () => bringToFront(win), { passive: true });
-    win.querySelector('.btn-close')?.addEventListener('click', () => closeWindow(win));
-    win.querySelector('.btn-min')?.addEventListener('click', () => {
-      win.classList.remove('window-opening', 'window-closing');
-      win.classList.add('window-minimizing');
-      setTimeout(() => { win.style.display = 'none'; win.classList.remove('window-minimizing', 'active');}, 250);
+  win.querySelectorAll(".paint-swatch").forEach((swatch) => {
+    swatch.addEventListener("click", () => {
+      win.querySelectorAll(".paint-swatch").forEach((s) => s.classList.remove("active"));
+      swatch.classList.add("active");
+      currentColor = swatch.dataset.color;
+      colorPicker.value = swatch.dataset.color;
     });
-    win.querySelector('.btn-max')?.addEventListener('click', () => {
-      const btn = win.querySelector('.btn-max');
-      if (win.classList.contains('maximized')) {
-        win.classList.remove('maximized');
-        win.style.width = win.dataset.prevWidth || win.dataset.defaultW + 'px';
-        win.style.height = win.dataset.prevHeight || win.dataset.defaultH + 'px';
-        win.style.top = win.dataset.prevTop || '100px';
-        win.style.left = win.dataset.prevLeft || '100px';
-        if (btn) btn.textContent = '□';
-        enforceWindowBounds(win);
-      } else {
-        win.dataset.prevTop = win.style.top || win.offsetTop + 'px';
-        win.dataset.prevLeft = win.style.left || win.offsetLeft + 'px';
-        win.dataset.prevWidth = win.style.width || win.offsetWidth + 'px';
-        win.dataset.prevHeight = win.style.height || win.offsetHeight + 'px';
-        win.classList.add('maximized');
-        if (btn) btn.textContent = '◱';
+  });
+  colorPicker.addEventListener("input", () => {
+    win.querySelectorAll(".paint-swatch").forEach((s) => s.classList.remove("active"));
+    currentColor = colorPicker.value;
+  });
+
+  win.querySelectorAll(".paint-tool").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      win.querySelectorAll(".paint-tool").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentTool = btn.dataset.tool;
+    });
+  });
+
+  undoBtn.addEventListener("click", () => {
+    if (undoStack.length === 0) return;
+    const previous = undoStack.pop();
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      savePaintState();
+    };
+    img.src = previous;
+  });
+
+  clearBtn.addEventListener("click", () => {
+    saveUndoSnapshot();
+    paintBackground();
+    savePaintState();
+  });
+
+  setTimeout(() => { resizeCanvas(); loadSavedDrawing(); }, 0);
+  win.paintResize = resizeCanvas;
+
+  function loadSavedDrawing() {
+    const saved = loadFromStorage("nebula-paint", null);
+    if (!saved) return;
+    const img = new Image();
+    img.onload = () => ctx.drawImage(img, 0, 0);
+    img.src = saved;
+  }
+  function savePaintState() {
+    saveToStorage("nebula-paint", canvas.toDataURL());
+  }
+}
+
+// Snake
+function getSnakeHTML() {
+  return `
+    <div class="snake-game">
+      <div class="snake-header">
+        <div class="snake-stats">
+          <span class="snake-score" id="snake-score">Score: 0</span>
+          <span class="snake-best" id="snake-best">Best: 0</span>
+        </div>
+        <button class="snake-restart" id="snake-restart">Restart</button>
+      </div>
+      <canvas class="snake-canvas" id="snake-canvas"></canvas>
+      <div class="snake-hint">Use arrow keys — click the game first</div>
+    </div>
+  `;
+}
+
+function initSnake(win) {
+  const canvas = win.querySelector("#snake-canvas");
+  const ctx = canvas.getContext("2d");
+  const scoreEl = win.querySelector("#snake-score");
+  const bestEl = win.querySelector("#snake-best");
+  const restartBtn = win.querySelector("#snake-restart");
+  const CELL = 18;
+  const GRID = 20;
+  canvas.width = CELL * GRID;
+  canvas.height = CELL * GRID;
+
+  let snake, direction, nextDirection, food, score, gameOver, loopId;
+  let bestScore = loadFromStorage("nebula-snake-best", 0);
+
+  function resetGame() {
+    snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+    direction = { x: 1, y: 0 };
+    nextDirection = direction;
+    score = 0;
+    gameOver = false;
+    scoreEl.textContent = "Score: 0";
+    bestEl.textContent = "Best: " + bestScore;
+    placeFood();
+    draw();
+  }
+  function placeFood() {
+    let pos;
+    do {
+      pos = { x: Math.floor(Math.random() * GRID), y: Math.floor(Math.random() * GRID) };
+    } while (snake.some((seg)=>seg.x===pos.x && seg.y === pos.y));
+    food = pos;
+  }
+  function drawGrid() {
+    ctx.strokeStyle="#2a231d";
+    ctx.lineWidth=1;
+    for (let i=0; i <= GRID; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i *CELL, 0);
+      ctx.lineTo(i *CELL, canvas.height);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0,i * CELL);
+      ctx.lineTo(canvas.width, i * CELL);
+      ctx.stroke();
+    }
+  }
+
+  function draw() {
+    ctx.fillStyle ="#1f1a16";
+    ctx.fillRect(0,0, canvas.width, canvas.height);
+    drawGrid();
+    const foodCenterX=food.x * CELL + CELL / 2;
+    const foodCenterY=food.y * CELL + CELL / 2;
+    ctx.fillStyle="#e0704f";
+    ctx.beginPath();
+    ctx.arc(foodCenterX, foodCenterY, (CELL - 4) / 2, 0, Math.PI * 2);
+    ctx.fill();
+    snake.forEach((seg, i) => {
+      ctx.fillStyle = i === 0 ? "#a8e6a1" : "#4f9d57";
+      ctx.fillRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
+    });
+
+    const head = snake[0];
+    const hx = head.x * CELL;
+    const hy = head.y * CELL;
+    ctx.fillStyle = "#0d0b09";
+    let eye1, eye2;
+    if (direction.x===1) {eye1 =[hx + CELL * 0.65, hy + CELL * 0.3]; eye2=[hx + CELL * 0.65,hy +CELL * 0.7]; }
+    else if (direction.x === -1) {eye1=[hx +CELL* 0.35,hy + CELL*0.3];eye2 =[hx+ CELL*0.35, hy + CELL * 0.7]; }
+    else if (direction.y === -1) {eye1 = [hx + CELL * 0.3, hy + CELL * 0.35]; eye2 = [hx + CELL * 0.7, hy + CELL * 0.35]; }
+    else { eye1 = [hx + CELL * 0.3,hy + CELL * 0.65]; eye2 = [hx + CELL * 0.7, hy + CELL * 0.65]; }
+
+    ctx.beginPath();
+    ctx.arc(eye1[0], eye1[1], 1.6, 0, Math.PI * 2);
+    ctx.arc(eye2[0], eye2[1], 1.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (gameOver) {
+      ctx.fillStyle = "rgba(0,0,0,0.6)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#efe6d8";
+      ctx.font = "16px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2);
+    }
+  }
+
+  function tickGame() {
+    if (gameOver) return;
+    direction = nextDirection;
+    const head = {
+      x: (snake[0].x + direction.x + GRID) % GRID,
+      y: (snake[0].y + direction.y + GRID) % GRID,
+    };
+    if (snake.some((seg) => seg.x === head.x && seg.y === head.y)) {
+      gameOver = true;
+      draw();
+      return;
+    }
+    snake.unshift(head);
+    if (head.x === food.x && head.y === food.y) {
+      score++;
+      scoreEl.textContent = "Score: " + score;
+      if (score > bestScore) {
+        bestScore = score;
+        bestEl.textContent = "Best: " + bestScore;
+        saveToStorage("nebula-snake-best", bestScore);
       }
-      bringToFront(win);
-      if (win.id === 'window-paint') setTimeout(initPaint, 100);
-      if (win.id === 'window-game') setTimeout(initGame, 100);
-    });
-  });
-  document.querySelectorAll('.desk-icon').forEach(icon => icon.addEventListener('click', () => openWindow('window-' + icon.dataset.app)));
-  document.querySelectorAll('.dock-item[data-app]').forEach(item => item.addEventListener('click', () => openWindow('window-' + item.dataset.app)));
-  document.getElementById('wormhole-trigger')?.addEventListener('click', triggerWormhole);
+      placeFood();
+    } else {
+      snake.pop();
+    }
+    draw();
+  }
 
-// right-click context menu
-  const ctxMenu = document.getElementById('context-menu');
-  const desktop = document.getElementById('desktop');
-  desktop?.addEventListener('contextmenu', e => {
+  function handleKeydown(e) {
+    if (!win.classList.contains("active")) return;
+    const keyMap = {
+      ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 },
+      ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 },
+    };
+    const newDir = keyMap[e.key];
+    if (!newDir) return;
     e.preventDefault();
-    ctxMenu.style.left = Math.min(e.clientX, window.innerWidth - 220) + 'px';
-    ctxMenu.style.top = Math.min(e.clientY, window.innerHeight - 200) + 'px';
-    ctxMenu.style.display = 'block';
+    const isOpposite = newDir.x === -direction.x && newDir.y === -direction.y;
+    if (!isOpposite) nextDirection = newDir;
+  }
+  document.addEventListener("keydown", handleKeydown);
+  restartBtn.addEventListener("click", resetGame);
+  loopId = setInterval(tickGame, 130);
+  resetGame();
+  win.snakeCleanup = () => {
+    clearInterval(loopId);
+    document.removeEventListener("keydown", handleKeydown);
+  };
+}
+
+// TODO widget
+function initTodoWidget() {
+  const input = document.getElementById("todo-input");
+  const addBtn = document.getElementById("todo-add");
+  const list = document.getElementById("todo-list");
+  let tasks = loadFromStorage("nebula-tasks", []);
+
+  function render() {
+    list.innerHTML = "";
+    tasks.forEach((task) => {
+      const row = document.createElement("div");
+      row.className = "todo-item";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = task.done;
+      checkbox.addEventListener("change", () => {
+        task.done = checkbox.checked;
+        saveToStorage("nebula-tasks", tasks);
+        render();
+      });
+
+      const label = document.createElement("span");
+      label.textContent = task.text;
+      if (task.done) label.classList.add("todo-done");
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "todo-delete";
+      deleteBtn.textContent = "×";
+      deleteBtn.addEventListener("click", () => {
+        tasks = tasks.filter((t) => t.id !== task.id);
+        saveToStorage("nebula-tasks", tasks);
+        render();
+      });
+      row.appendChild(checkbox);
+      row.appendChild(label);
+      row.appendChild(deleteBtn);
+      list.appendChild(row);
+    });
+  }
+
+  function addTask() {
+    const text = input.value.trim();
+    if (text === "") return;
+    tasks.push({ id: Date.now(), text: text, done: false });
+    saveToStorage("nebula-tasks", tasks);
+    input.value = "";
+    render();
+  }
+  addBtn.addEventListener("click", addTask);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") addTask(); });
+  render();
+}
+
+// Hydration widget
+function initHydrationWidget() {
+  const countEl = document.getElementById("hydration-count");
+  const barFill = document.getElementById("hydration-bar-fill");
+  const minusBtn = document.getElementById("hydration-minus");
+  const plusBtn = document.getElementById("hydration-plus");
+
+  const GOAL = 8;
+  let cups = loadFromStorage("nebula-hydration", 0);
+  function render() {
+    countEl.textContent = cups + " / " + GOAL + " cups";
+    const percent = Math.min((cups/GOAL) * 100, 100);
+    barFill.style.width = percent+ "%";
+  }
+  plusBtn.addEventListener("click",()=>{cups++;saveToStorage("nebula-hydration", cups); render(); });
+  minusBtn.addEventListener("click",()=>{if(cups>0) cups--; saveToStorage("nebula-hydration", cups); render(); });
+  render();
+}
+initTodoWidget();
+initHydrationWidget();
+
+// context menu
+
+function initContextMenu() {
+  const menu = document.getElementById("context-menu");
+  const desktop = document.getElementById("desktop");
+  const wallpaperInput = document.getElementById("wallpaper-input");
+
+  desktop.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    menu.style.left = e.clientX + "px";
+    menu.style.top = e.clientY + "px";
+    menu.style.display = "flex";
   });
-  document.addEventListener('click', e => { if (!ctxMenu.contains(e.target)) ctxMenu.style.display = 'none'; });
-  document.querySelectorAll('.ctx-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const action = item.dataset.action;
-      if (action === 'refresh') fakeReboot();
-      else if (action === 'arrange') arrangeWindows();
-      else if (action === 'wallpaper') document.getElementById('wallpaper-input')?.click();
-      else if (action === 'about') alert('NEBULA OS v1.0\nBuilt for Hack Club Stardance\n\nNeo-Brutalist WebOS');
-      else openWindow('window-' + action);
-      ctxMenu.style.display = 'none';
+  document.addEventListener("click", () => { menu.style.display = "none"; });
+  menu.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const action=btn.dataset.action;
+      if (action==="refresh") location.reload();
+      if (action==="arrange") arrangeWindows();
+      if (action==="wallpaper") wallpaperInput.click();
     });
   });
-  initTerminal();
-  initCalculator();
-  initMusic();
-  initNotes();
-  initPomodoro();
-  initWallpaper();
-  initStickyNotes();
-  setInterval(updateTelemetry, 1000);
-  updateTelemetry();
+  wallpaperInput.addEventListener("change", () => {
+    const file = wallpaperInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const tempCanvas = document.createElement("canvas");
+        const MAX_WIDTH = 1600;
+        const scale = Math.min(1, MAX_WIDTH / img.width);
+        tempCanvas.width = img.width * scale;
+        tempCanvas.height = img.height * scale;
+        const tempCtx = tempCanvas.getContext("2d");
+        tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+        const compressed = tempCanvas.toDataURL("image/jpeg", 0.7);
+        desktop.style.backgroundImage = `url(${compressed})`;
+        desktop.style.backgroundSize = "cover";
+        desktop.style.backgroundPosition = "center";
+        try {
+          saveToStorage("nebula-wallpaper", compressed);
+        } catch (err) {
+          console.log("Wallpaper too large to save — will reset on reload.");
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  const savedWallpaper=loadFromStorage("nebula-wallpaper", null);
+  if (savedWallpaper){
+    desktop.style.backgroundImage=`url(${savedWallpaper})`;
+    desktop.style.backgroundSize="cover";
+    desktop.style.backgroundPosition="center";
+  }
+}
+function arrangeWindows(){
+  const cols=3;
+  const startX=60, startY = 60, gapX = 420, gapY = 300;
+  let i=0;
+  Object.values(openWindows).forEach((win) => {
+    if (win.classList.contains("maximized")) return;
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    win.style.left = (startX + col * gapX) + "px";
+    win.style.top = (startY + row * gapY) + "px";
+    i++;
+  });
+}
+
+function updateDockAutohide() {
+  const dockEl = document.querySelector(".dock");
+  const desktop = document.getElementById("desktop");
+  const anyMaximized = Object.values(openWindows).some((w) => w.classList.contains("maximized"));
+  desktop.classList.toggle("dock-autohide", anyMaximized);
+}
+document.getElementById("dock-trigger").addEventListener("mouseenter", () => {
+  document.querySelector(".dock").classList.add("dock-peek");
 });
-window.addEventListener('beforeunload', () => {
-  if (audioObjectUrl) URL.revokeObjectURL(audioObjectUrl);
+
+document.querySelector(".dock").addEventListener("mouseleave", () => {
+  document.querySelector(".dock").classList.remove("dock-peek");
 });
+initContextMenu();
+
+
