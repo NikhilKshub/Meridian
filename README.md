@@ -19,8 +19,8 @@ A browser-based desktop (Web OS) built with plain HTML, CSS, and JavaScript.
 | ![Snake](assets/screenshots/snake.png) | ![Pomodoro](assets/screenshots/pomodoro.png) | ![Boot](assets/screenshots/boot.png) |
 
 ## What it is
-Meridian is a small desktop environment that runs entirely in the browser. It has windows you can drag, minimize, and maximize, a macOS-style dock, desktop widgets, wallpaper and theme customization, and seven working apps. Everything runs locally — there's no backend.
-The project started as a space-themed idea, but the more I built, the less it actually felt like a WebOS and I kept running into problems trying to fit the interface around the theme. I ended up building a neo-brutalist version, but that one leaned on AI for a few features I couldn't really defend — most notably a "wormhole" effect using particle physics and simulation, which I genuinely could not have written myself at the time. The overall look also read as AI-generated. So I rebuilt again, this time from scratch, into what's here now: a simpler, minimal desktop.
+Meridian is a small desktop environment that runs entirely in the browser — windows you can drag, minimize, and maximize, a macOS-style dock, wallpaper, desktop widgets, and seven working apps, all built from three plain files with no framework and no backend.
+The name comes from the idea of a sun crossing its highest point — a still, deliberate moment rather than a busy sci-fi theme. That's also why the whole interface leans warm and minimal.
 
 ## Features
 - **Window manager** — draggable, focusable windows with minimize, maximize, z-index focus stacking; smooth open/close motion.
