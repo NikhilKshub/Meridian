@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>NEBULA OS</title>
+    <link rel="stylesheet" href="style-rework.css"/>
+    <link 
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Caveat:wght@500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  </head>
+  <body>
+
+<!-- login -->
+    <div id="login-screen">
+      <div class="login-date">
+        <div id="login-day">SATURDAY</div>
+        <div id="login-date-text">05 SEP 2026</div>
+      </div>
+
+      <div class="login-card">
+        <div class="login-logo">NEBULA</div> 
+        <div class="login-subtitle">WEB DESKTOP</div>
+
+        <button id="sign-in-btn" class="login-btn">SIGN IN</button>
+      </div>
+
+      <div class="login-quote">
+        <div class="quote-text">“A journey of a thousand miles begins with one step.”</div>
+        <div class="quote-author">— LAO TZU</div>
+      </div>
+
+      <div class="login-footer">NEBULA / BUILD 01</div>
+    </div>
+<!-- desktop -->
+    <canvas id="wormhole-canvas" 
+    style="display:none; position:fixed; inset:0; z-index:99970; pointer-events:none;"> </canvas>
+    <div id="desktop" style="display:none">
+      <div id="desktop-bg"></div>
+      <div id="toast-container" class="toast-container"></div>
+      <div id="topbar">
+        <div class="topbar-left">
+          <div class="logo-mark">◉</div>
+          <div class="logo-text">NEBULA</div>
+        </div>
+        <div class="topbar-right">
+          <span id="date">SUN, JUN21</span>
+          <span id="clock" >00:00</span>
+        </div>
+      </div>
+
+      <div id="desktop-icons">
+        <div class="desk-icon" data-app="terminal">
+          <div class="desk-icon-box icon-mint">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+          </div>
+          <div class="desk-icon-label">TERMINAL</div>
+        </div>
+        <div class="desk-icon" data-app="music">
+          <div class="desk-icon-box icon-red">      
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="2"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+          </div>
+          <div class="desk-icon-label">MUSIC</div>
+        </div>
+        <div class="desk-icon" data-app="calc">
+          <div class="desk-icon-box icon-yellow">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5">
+              <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+              <line x1="8" y1="6" x2="16" y2="6"></line>
+              <line x1="8" y1="10" x2="16" y2="10"></line>
+              <line x1="8" y1="14" x2="16" y2="14"></line>
+            </svg>
+          </div>
+          <div class="desk-icon-label">CALC</div>
+        </div>
+        <div class="desk-icon" data-app="notes">
+          <div class="desk-icon-box icon-blue">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+           </div>
+           <div class="desk-icon-label">NOTES</div>
+        </div>
+        <div class="desk-icon" data-app="paint">
+          <div class="desk-icon-box icon-pink">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5">
+              <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+              <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+            </svg>
+          </div>
+          <div class="desk-icon-label">PAINT</div>
+        </div>
+        <div class="desk-icon" data-app="game">
+          <div class="desk-icon-box icon-green">
+            <div style="font-size:28px">🎮</div>
+          </div>
+          <div class="desk-icon-label">SNAKE</div>
+        </div>
+        <div class="desk-icon" data-app="pomodoro">
+          <div class="desk-icon-box icon-dark">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.88)" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <div class="desk-icon-label">FOCUS</div>
+        </div>
+      </div>
+
+      <div id="widgets">
+        <div class="widget widget-todo">
+            <div class="widget-header">TASKS</div>
+            <div class="todo-input-row">
+                <input type="text" id="todo-input" placeholder="Add a task..." autocomplete="off" spellcheck="false">
+                <button id="todo-add-btn">+</button>
+            </div>
+            <ul class="todo-list" id="todo-list"></ul>
+            <div class="todo-footer">
+                <span class="todo-count" id="todo-count">0 left</span>
+                <button class="todo-clear-btn" id="todo-clear-done">CLEAR DONE</button>
+            </div>
+        </div>
+
+        <div class="widget widget-notes-sticky">
+          <div class="widget-header">QUICK NOTES</div>
+          <textarea id="sticky-notes-input" class="sticky-notes-textarea" placeholder="Type a note..." spellcheck="false"></textarea>
+          <div class="sticky-notes-footer">
+            <span class="sticky-notes-count" id="sticky-char-count">0 chars</span>
+            <button class="sticky-notes-clear" id="sticky-notes-clear">CLEAR</button>
+          </div>
+        </div>
+
+        <div class="widget widget-hydro">
+            <div class="widget-header">HYDRATION</div>
+            <div class="hydro-count"><span id="hydro-cups">0</span> / <span id="hydro-goal">8</span> CUPS</div>
+            <div class="hydro-bar-track"><div class="hydro-bar-fill" id="hydro-bar-fill"></div></div>
+            <div class="hydro-controls">
+               <button class="hydro-btn" id="hydro-minus">−</button>
+                <button class="hydro-btn hydro-btn-main" id="hydro-plus">+ CUP</button>
+            </div>
+        </div>
+      </div>
+
+      <div id="dock">
+        <div class="dock-item" data-app="terminal">
+          <div class="dock-box icon-mint">⌘</div>
+        </div>
+        <div class="dock-item" data-app="music">
+          <div class="dock-box icon-red">♪</div>
+        </div>
+        <div class="dock-item" data-app="calc">
+          <div class="dock-box icon-yellow">⊕</div>
+        </div>
+        <div class="dock-item" data-app="notes">
+          <div class="dock-box icon-blue">✎</div>
+        </div>
+        <div class="dock-item" data-app="paint">
+          <div class="dock-box icon-pink">🎨</div>
+        </div>
+        <div class="dock-item" data-app="game">
+          <div class="dock-box icon-green">🎮</div>
+        </div>
+        <div class="dock-item" data-app="pomodoro">
+          <div class="dock-box icon-dark"; color:rgba(255,255,255,0.88)">⏱</div>
+        </div>
+        <div class="dock-divider"></div>
+        <div class="dock-item" id="wormhole-trigger">
+          <div class="dock-box wormhole-box">🕳</div>
+        </div>
+      </div>
+
+      <div id="context-menu">
+        <div class="ctx-item" data-action="refresh">↻ REFRESH</div>
+        <div class="ctx-item" data-action="arrange">▣ ARRANGE</div>
+        <div class="ctx-divider"></div>
+        <div class="ctx-item" data-action="wallpaper">🖼 REPLACE WALLPAPER</div>
+        <div class="ctx-divider"></div>
+        <div class="ctx-item" data-action="terminal">⌘ TERMINAL</div>
+        <div class="ctx-item" data-action="calc">⊕ CALCULATOR</div>
+        <div class="ctx-divider"></div>
+        <div class="ctx-item" data-action="about">ⓘ ABOUT</div>
+      </div>
+
+      <input type="file" id="wallpaper-input" accept="image/*" style="display:none;">
+      <div id="confirm-overlay" style="display:none">
+        <div class="window confirm-window">
+          <div class="window-header" style="background:var(--red)">
+            <div class="window-title">
+              <span class="win-icon">⚠️</span>
+              <span>WARNING</span>
+            </div>
+          </div>
+          <div class="window-body confirm-body">
+            <div class="confirm-content">
+              <p class="confirm-message">This Action Will Collapse the Universe and Wipe All Local Data. Proceed?</p>
+              <div class="confirm-actions">
+                <button class="confirm-btn confirm-btn-yes" id="confirm-yes">COLLAPSE</button>
+                <button class="confirm-btn confirm-btn-no" id="confirm-no">CANCEL</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- wormhole overlay -->
+      <div id="wormhole-overlay">
+        <div class="wormhole-stage">
+          <div class="wormhole-core"></div>
+          <div class="wormhole-ring r1"></div>
+          <div class="wormhole-ring r2"></div>
+          <div class="wormhole-ring r3"></div>
+          <div class="wormhole-ring r4"></div>
+        </div>
+        <div class="wormhole-text">SINGULARITY</div>
+        <div class="wormhole-sub">EVERYTHING RETURN TO NOTHING</div>
+      </div>
+      <!--terminal-->
+      <div class="window" id="window-terminal" data-default-w="520" data-default-h="380" style="top: 60px; left: 40px; display: none">
+        <div class="window-header" style="background: #00ffab">
+          <div class="window-title"><span class="win-icon">⌘</span><span>TERMINAL</span></div>
+          <div class="window-controls">
+            <button class="win-btn btn-min">−</button>
+            <button class="win-btn btn-max">□</button>
+            <button class="win-btn btn-close">✕</button>
+          </div>
+        </div>
+        <div class="window-body terminal-body">
+          <div class="terminal-output" id="term-output"></div>
+          <div class="terminal-input">
+            <span class="term-prompt">❯</span>
+            <input type="text" id="term-input"  autocomplete="off" spellcheck="false" />
+          </div>
+        </div>
+      </div>
+
+      <!-- music -->
+       <div class="window" id="window-music" data-default-w="340" data-default-h="540" style="top:80px; left:400px; display:none">
+        <div class="window-header" style="background:#ff004d">
+          <div class="window-title"><span class="win-icon"></span><span>MUSIC</span></div>
+          <div class="window-controls">
+            <button class="win-btn btn-min">−</button>
+            <button class="win-btn btn-max">□</button>
+            <button class="win-btn btn-close">✕</button>
+          </div>
+        </div>
+        <div class="window-body music-body">
+          <input type="file" id="music-file-input" accept="audio/*" multiple style="display:none" />
+          <div class="music-player-top">
+            <div class="vinyl-player" id="vinyl-drop-zone">
+              <div class="vinyl-record" id="vinyl-record">
+                <div class="vinyl-grooves"></div>
+                <div class="vinyl-label"><div class="vinyl-hole"></div></div>
+                <div class="vinyl-drop-hint" id="vinyl-drop-hint">📁 DROP</div>
+              </div>
+              <div class="vinyl-arm" id="vinyl-arm"></div>
+            </div>
+            <div class="visualizer">
+              <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
+              <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
+              <div class="viz-bar"></div><div class="viz-bar"></div>
+            </div>
+            <div class="track-info">
+              <div class="track-name" id="track-name">NO TRACK SELECTED</div>
+              <div class="track-artist" id="track-artist">ADD MUSIC TO BEGIN</div>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="music-controls">
+              <button class="m-btn" id="m-prev">⏮</button>
+              <button class="m-btn m-play" id="m-play">▶</button>
+              <button class="m-btn" id="m-next">⏭</button>
+              <button class="m-btn m-upload" id="m-upload" title="Load Audio">📁</button>
+            </div>
+            <div class="music-volume">
+              <label>VOL</label>
+              <input type="range" id="music-volume" min="0" max="100" value="70"/>
+            </div>
+          </div>
+          <div class="music-playlist">
+            <div class="playlist-header">
+              <span>PLAYLIST</span>
+              <button class="playlist-clear-btn" id="playlist-clear-btn" style="display:none">CLEAR</button>
+            </div>
+            <ul class="playlist-tracks" id="playlist-tracks">
+              <li class="playlist-empty">Awaiting waveform input....</li>
+            </ul>
+          </div>
+        </div>
+       </div>
+
+
+     <!-- calculator -->
+      <div class="window" id="window-calc" data-default-w="320" data-default-h="480" style="top: 120px; left: 200px; display: none">
+        <div class="window-header" style="background: #ffde4d">
+          <div class="window-title"><span class="win-icon">⊕</span><span>CALCULATOR</span></div>
+          <div class="window-controls">
+            <button class="win-btn btn-min">−</button>
+            <button class="win-btn btn-max">□</button>
+            <button class="win-btn btn-close">✕</button>
+          </div>
+        </div>
+        <div class="window-body calc-body">
+          <div class="calc-display">
+            <div class="calc-history" id="calc-history"></div>
+            <div class="calc-current" id="calc-current">0</div>
+          </div>
+          <div class="calc-keypad">
+            <button class="c-btn c-op" data-op="C">AC</button>
+            <button class="c-btn c-op" data-op="±">±</button>
+            <button class="c-btn c-op" data-op="%">%</button>
+            <button class="c-btn c-op" data-op="÷">÷</button>
+            <button class="c-btn c-num" data-val="7">7</button>
+            <button class="c-btn c-num" data-val="8">8</button>
+            <button class="c-btn c-num" data-val="9">9</button>
+            <button class="c-btn c-op" data-op="×">×</button>
+            <button class="c-btn c-num" data-val="4">4</button>
+            <button class="c-btn c-num" data-val="5">5</button>
+            <button class="c-btn c-num" data-val="6">6</button>
+            <button class="c-btn c-op" data-op="−">−</button>
+            <button class="c-btn c-num" data-val="1">1</button>
+            <button class="c-btn c-num" data-val="2">2</button>
+            <button class="c-btn c-num" data-val="3">3</button>
+            <button class="c-btn c-op" data-op="+">+</button>
+            <button class="c-btn c-num c-wide" data-val="0">0</button>
+            <button class="c-btn c-num" data-val=".">.</button>
+            <button class="c-btn c-eq" data-op="=">=</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- notes -->
+      <div class="window" id="window-notes" data-default-w="360" data-default-h="420" style="top:100px; left:600px; display:none">
+        <div class="window-header" style="background:#4d96ff">
+          <div class="window-title"><span class="win-icon">✎</span><span>NOTES</span></div>
+          <div class="window-controls">
+            <button class="win-btn btn-min">−</button>
+            <button class="win-btn btn-max">□</button>
+            <button class="win-btn btn-close">✕</button>
+          </div>
+        </div>
+        <div class="window-body notes-body">
+          <div class="notes-toolbar">
+            <button class="note-tool" data-cmd="bold"><b>B</b></button>
+            <button class="note-tool" data-cmd="italic"><i>I</i></button>
+            <button class="note-tool" data-cmd="underline"><u>U</u></button>
+          </div>
+          <div class="notes-editor" contenteditable="true" spellcheck="false">
+            <p><b>🎉 Welcome to Nebula OS! 🎉</b></p>
+            <p>You've successfully hacked into the mainframe... just kidding, this is a webOS. But you look very cool doing it. 😎</p>
+            <p><b>How to survive here:</b></p>
+            <p>• <b>Click things:</b> Specifically, those big chunky icons. They do stuff.</p>
+            <p>• <b>Terminal:</b> Type random words in there. Who knows? You might summon a black hole.</p>
+            <p>• <b>Wormhole:</b> Speaking of black holes, click the 🕳 Wormhole if you want to aggressively delete this reality.</p>
+            <p>• <b>Bottom Dock:</b> Use it when you get lost in the sauce.</p>
+            <p></p>
+            <p><i>Status: 100% stable (unless you divide by zero). 🚀</i></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- paint -->
+      <div class="window" id="window-paint" data-default-w="600" data-default-h="480" style="top:60px; left:300px; display:none">
+        <div class="window-header" style="background:#ff6b6b">
+          <div class="window-title"><span class="win-icon">🎨</span><span>PAINT</span></div>
+          <div class="window-controls">
+            <button class="win-btn btn-min">−</button>
+            <button class="win-btn btn-max">□</button>
+            <button class="win-btn btn-close">✕</button>
+          </div>
+        </div>
+        <div class="window-body paint-body">
+          <div class="paint-toolbar">
+            <div class="paint-colors">
+              <button class="paint-color active" data-color="#000000" style="background:#000"></button>
+              <button class="paint-color" data-color="#ff004d" style="background:#ff004d"></button>
+              <button class="paint-color" data-color="#4d96ff" style="background:#4d96ff"></button>
+              <button class="paint-color" data-color="#00ffab" style="background:#00ffab"></button>
+              <button class="paint-color" data-color="#ffde4d" style="background:#ffde4d"></button>
+              <button class="paint-color" data-color="#ff6b6b" style="background:#ff6b6b"></button>
+              <button class="paint-color" data-color="#ffffff" style="background:#fff"></button>  
+            </div>
+            <div class="paint-tools">
+              <button class="paint-btn active" data-tool="brush" title="Brush">〰️</button>
+              <button class="paint-btn" data-tool="line" title="Line">📏</button>
+              <button class="paint-btn" data-tool="rect" title="Rectangle">⬜</button>
+              <button class="paint-btn" data-tool="circle" title="Circle">⭕</button>
+              <label>SIZE</label>
+              <input type="range" id="brush-size" min="1" max="20" value="4" />
+              <button class="paint-btn" id="paint-undo" title="Undo (Ctrl+Z)">↩️</button>
+              <button class="paint-btn" id="paint-clear" title="Clear Canvas">🗑️</button>
+              <button class="paint-btn" id="paint-save" title="Save PNG">💾</button>
+            </div>
+          </div>
+          <div class="paint-canvas-area">
+            <canvas id="paint-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- snake -->
+      <div class="window" id="window-game" data-default-w="360" data-default-h="480" style="top:40px; left:250px; display:none">
+        <div class="window-header" style="background:#38e54d">
+          <div class="window-title"><span class="win-icon">🎮</span><span>Snake Game</span></div>
+          <div class="window-controls">
+            <button class="win-btn btn-min">−</button>
+            <button class="win-btn btn-max">□</button>
+            <button class="win-btn btn-close">✕</button>
+          </div>
+        </div>
+        <div class="window-body game-body">
+          <div class="game-header">
+            <div>SCORE: <span id="game-score">0</span></div>
+            <div>BEST:<span id="game-high">0</span></div>
+          </div>
+          <div class="game-canvas-wrap">
+            <canvas id="game-canvas" width="300" height="300"></canvas>
+          </div>
+          <div class="game-controls">
+            <button class="game-btn" id="game-start">START</button>
+            <button class="game-btn game-stop" id="game-stop" style="display:none">STOP</button>
+            <div class="game-hint">MANUAL OVERRIDE: ARROW KEYS</div> 
+          </div>
+        </div>
+      </div>
+
+      <!-- focus timer -->
+       <div class="window" id="window-pomodoro" data-default-w="340" data-default-h="460" style="top:80px; left:500px; display:none">
+        <div class="window-header pomo-header-dark">
+          <div class="window-title">
+            <span class="win-icon">⏱</span>
+            <span>FOCUS TIMER</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn btn-min">−</button>
+            <button class="win-btn btn-max">□</button>
+            <button class="win-btn btn-close">✕</button>
+          </div>
+        </div>
+        <div class="window-body pomo-body">
+          <div class="pomo-modes">
+            <button class="pomo-mode-btn active" data-mode="focus">FOCUS</button>
+            <button class="pomo-mode-btn" data-mode="short">SHORT BREAK</button>
+            <button class="pomo-mode-btn" data-mode="long">LONG BREAK</button>
+            <button class="pomo-mode-btn" data-mode="custom">CUSTOM</button>
+          </div>
+          <div class="pomo-timer-display" id="pomo-display">25:00</div>
+          <div class="pomo-label" id="pomo-label">FOCUS SESSION</div>
+          <div class="pomo-progress-wrap">
+            <div class="pomo-progress-bar" id="pomo-progress"></div>
+          </div>
+          <div class="pomo-controls">
+            <button class="pomo-btn pomo-start" id="pomo-start">START</button>
+            <button class="pomo-btn pomo-reset" id="pomo-reset">RESET</button>
+          </div>
+          <div class="pomo-sessions">
+            <span class="pomo-session-label">SESSIONS COMPLETED</span>
+            <span class="pomo-sessions-count" id="pomo-sessions">0</span>
+          </div>
+          <div class="pomo-custom-overlay" id="pomo-custom-overlay" style="display:none;">
+            <div class="pomo-custom-box">
+              <div class="pomo-custom-title">SET CUSTOM TIME</div>
+              <div class="pomo-custom-type-toggle">
+                <input type="radio" id="ctype-focus" name="ctype" value="focus" checked>
+                <label for="ctype-focus">FOCUS</label>
+                <input type="radio" id="ctype-break" name="ctype" value="break">
+                <label for="ctype-break">BREAK</label>
+              </div>
+              <div class="pomo-custom-inputs">
+                <div class="pomo-time-group">
+                  <input type="number" id="pomo-custom-h" min="0" max="99" value="0">
+                  <label>HR</label>
+                </div>
+                <div class="pomo-time-sep">:</div>
+                <div class="pomo-time-group">
+                  <input type="number" id="pomo-custom-m" min="0" max="59" value="10">
+                  <label>MIN</label>
+                </div>
+                <div class="pomo-time-sep">:</div>
+                <div class="pomo-time-group">
+                  <input type="number" id="pomo-custom-s" min="0" max="59" value="0">
+                  <label>SEC</label>
+                </div>
+              </div>
+              <div class="pomo-custom-actions">
+                <button class="pomo-custom-btn btn-cancel" id="pomo-custom-cancel">CANCEL</button>
+                <button class="pomo-custom-btn btn-set" id="pomo-custom-set">SET</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <script src="script-rework.js"></script>
+  </body>
+</html>
+
