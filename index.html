@@ -3,8 +3,27 @@
 <head>
   <title>Meridian</title>
   <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- boot screen -->
+  <div class="boot-screen" id="boot-screen">
+    <div class="boot-corner">
+      <div class="boot-meta">
+        <span id="boot-day"></span>
+        <span>·</span>
+        <span id="boot-date"></span>
+      </div>
+      <div id="boot-time"></div>
+    </div>
+    <div class="boot-center">
+      <div class="boot-line" id="boot-line"></div>
+      <div class="boot-wordmark">MERIDIAN</div>
+      <button class="boot-enter" id="boot-enter">Enter</button>
+    </div>
+    <div class="boot-quote" id="boot-quote"></div>
+  </div>
+<!-- status bar -->
   <header class="status-bar">
     <span>MERIDIAN</span>
     <div class="status-right">
@@ -12,32 +31,67 @@
       <span id="status-time">14:36</span>
     </div>
   </header>
+<!-- desktop -->
+  <main class="desktop">
+    <div class="dock">
+      <button class="icon" data-app="notes">
+        <span class="icon-glyph" style="font-size: 28px;">📝</span>
+        <span class="icon-label">Notes</span>
+      </button>
+      <button class="icon" data-app="calculator">
+        <span class="icon-glyph" style="font-size: 28px;">🧮</span>
+        <span class="icon-label">Calculator</span>
+      </button>
+    </div>
+<!-- notes -->
+    <div class="window" id="window-notes">
+      <div class="window-titlebar">
+        <span>Notes</span>
+        <button class="window-close">×</button>
+      </div>
+      <div class="window-body">
+        <textarea id="notes-text" placeholder="Write something..."></textarea>
+      </div>
+    </div>
+<!-- calculator -->
+    <div class="window" id="window-calculator">
+      <div class="window-titlebar">
+        <span>Calculator</span>
+        <button class="window-close">×</button>
+      </div>
+      <div class="window-body calculator-body">
+        <div id="calc-display">0</div>
+        <div class="calc-keys">
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
+            <button data-key="clear">C</button>
+            <button data-key="/">÷</button>
+            <button data-key="*">×</button>
+            <button data-key="backspace">⌫</button>
+            <button data-key="7">7</button>
+            <button data-key="8">8</button>
+            <button data-key="9">9</button>
+            <button data-key="-">−</button>
+            <button data-key="4">4</button>
+            <button data-key="5">5</button>
+            <button data-key="6">6</button>
+            <button data-key="+">+</button>
+            <button data-key="1">1</button>
+            <button data-key="2">2</button>
+            <button data-key="3">3</button>
+            <button data-key="=" style="grid-row: span 2; background: var(--accent); color: white;">=</button>
+            <button data-key="0" style="grid-column: span 2;">0</button>
+            <button data-key=".">.</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <button class="icon" data-app="notes">
-    <div class="icon-glyph">
-      <svg viewBox="0 0 24 24" width="28" height="28">
-        <rect x="4" y="3" width="16" height="18" fill="none" stroke="black" stroke-width="1.5"/>
-        <line x1="7" y1="8" x2="17" y2="8" stroke="black" stroke-width="1.5"/>
-        <line x1="7" y1="12" x2="17" y2="12" stroke="black" stroke-width="1.5"/>
-      </svg>
+    <div class="widget-panel">
+      <div class="widget-label">Today's Quote</div>
+      <div id="desktop-quote"></div>
     </div>
-    <span class="icon-label">Notes</span>
-  </button>
-  <div class="window" id="window-notes" style="display: none;">
-    <div class="window-titlebar">
-      <span>Notes</span>
-      <button class="window-close">×</button>
-    </div>
-    <div class="window-body">
-      <textarea id="notes-text" placeholder="Type here..." style="width: 100%; height: 150px; border: 1px solid var(--border); font-family: inherit;"></textarea>
-    </div>
-  </div>
-<script src="script.js"></script>
+  </main>
+
+  <script src="script.js"></script>
 </body>
 </html>
-
-
-
-
-
-
