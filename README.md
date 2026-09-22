@@ -4,16 +4,16 @@ A small browser-based WebOS made with HTML, CSS, and JavaScript.
 ## In Action
 
 ### Boot Screen
-![Boot Screen](assets/Boot.png)
+![Boot Screen](assets/latest%20webos%20images/Boot.png)
 
 ### Desktop
-![Desktop](assets/Desktop.png)
+![Desktop](assets/latest%20webos%20images/Desktop.png)
 
 ### Notes
-![Notes](assets/Notes.png)
+![Notes](assets/latest%20webos%20images/Notes.png)
 
 ### Calculator
-![Calculator](assets/Calculator.png)
+![Calculator](assets/latest%20webos%20images/Calculator.png)
 
 ## Live Demo
 Try Meridian here:
