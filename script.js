@@ -28,14 +28,7 @@ const bootQuote=randomQuote();
 const desktopQuote=randomQuote();
 document.getElementById("boot-quote").textContent=`"${bootQuote.text}" — ${bootQuote.from}`;
 document.getElementById("desktop-quote").textContent=`"${desktopQuote.text}" — ${desktopQuote.from}`;
-requestAnimationFrame(()=>{
-  document.getElementById("boot-line").classList.add("grow");
-  document.querySelector(".boot-wordmark").classList.add("show");
-});
 
-setTimeout(()=>{
-  document.getElementById("boot-enter").classList.add("show");
-}, 900);
 document.getElementById("boot-enter").addEventListener("click", () => {
   const boot=document.getElementById("boot-screen");
   boot.classList.add("boot-hide");
@@ -78,6 +71,16 @@ const notesWindow=document.getElementById("window-notes");
 notesIcon.addEventListener("click",()=>openWindow(notesWindow));
 notesWindow.querySelector(".window-close").addEventListener("click",()=>closeWindow(notesWindow));
 makeDraggable(notesWindow);
+const notesText=document.getElementById("notes-text");
+const charCount=document.getElementById("char-count");
+const clearNotes=document.getElementById("clear-notes");
+notesText.addEventListener("input", () => {
+  charCount.textContent = `Characters: ${notesText.value.length}`;
+});
+clearNotes.addEventListener("click", () => {
+  notesText.value = "";
+  charCount.textContent = "Characters: 0";
+});
 
 const calcIcon=document.querySelector('[data-app="calculator"]');
 const calcWindow=document.getElementById("window-calculator");
@@ -105,4 +108,32 @@ document.querySelectorAll("[data-key]").forEach((button) => {
     }
     calcDisplay.textContent = calcExpression || "0";
   });
+});
+
+const contextMenu = document.getElementById("context-menu");
+const changeWallpaper = document.getElementById("change-wallpaper");
+const wallpaperInput = document.getElementById("wallpaper-input");
+const desktop = document.querySelector(".desktop");
+
+desktop.addEventListener("contextmenu",(e)=>{
+  e.preventDefault();
+  contextMenu.style.left=`${e.clientX}px`;
+  contextMenu.style.top=`${e.clientY}px`;
+  contextMenu.style.display="block";
+});
+
+document.addEventListener("click",()=>{
+  contextMenu.style.display="none";
+});
+
+changeWallpaper.addEventListener("click",()=>{
+  wallpaperInput.click();
+});
+wallpaperInput.addEventListener("change",()=>{
+  const file=wallpaperInput.files[0];
+  if (file){
+    desktop.style.backgroundImage=`url("${URL.createObjectURL(file)}")`;
+    desktop.style.backgroundSize="cover";
+    desktop.style.backgroundPosition="center";
+  }
 });

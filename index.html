@@ -51,6 +51,10 @@
       </div>
       <div class="window-body">
         <textarea id="notes-text" placeholder="Write something..."></textarea>
+        <div class="notes-footer">
+          <span id="char-count">Characters: 0</span>
+          <button id="clear-notes">Clear</button>
+        </div>
       </div>
     </div>
 <!-- calculator -->
@@ -90,6 +94,10 @@
       <div class="widget-label">Today's Quote</div>
       <div id="desktop-quote"></div>
     </div>
+    <div id="context-menu">
+      <button id="change-wallpaper">Change Wallpaper</button>
+    </div>
+    <input id="wallpaper-input" type="file" accept="image/*">
   </main>
 
   <script src="script.js"></script>
