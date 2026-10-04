@@ -1,19 +1,73 @@
-:root{
-    --paper:#EDE4D0;
-    --ink:31E2A33;
-    --green:#5F8078;
+:root {
+    --paper: #EDE4D0;
+    --page: #FFF9E6;
+    --ink: #1E2A33;
+    --red: #9C2F22;
 }
 *{box-sizing: border-box;}
-.hidden{display:none;}
+.hidden{display: none;}
 
 body{
-    margin:0;
-    background-color:var(--paper);
-    color:var(--ink);
-    font-family:'Newsreader',serif;
-    display:flex;
-    flex-direction:column;
-    min-height:100vh;
+    margin: 0;
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: 'Newsreader', serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: var(--ink);
+    color: var(--paper);
+}
 
+.topbar h1 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: 0.05em;
+}
+
+.desk {
+    flex: 1;
+    position: relative;
+}
+
+.icons {
+    list-style: none;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.icons button {
+    background: none;
+    border: none;
+    padding: 8px;
+    width: 90px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    color: var(--ink);
+}
+
+.icons img {
+    height: 48px;
+}
+
+.icons .label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+}
+
+.icons button:hover .label {
+    text-decoration: underline;
+}
