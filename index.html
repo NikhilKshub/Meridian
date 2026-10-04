@@ -31,11 +31,43 @@
       </li>
     </ul>
 
+    <section class="window hidden" id="doodle">
+      <header class="titlebar">
+        <h2>Doodle</h2>
+        <button aria-label="Close">×</button>
+      </header>
+      <div class="window-body">
+        <p>Draw something that comes to mind.</p>
+        <canvas width="338" height="240"></canvas>
+        <div class="tools">
+          <button id="undo">Undo</button>
+          <button id="clear">Clear</button>
+        </div>
+      </div>
+    </section>
 
+    <section class="window hidden" id="notes">
+      <header class="titlebar">
+        <h2>Notes</h2>
+        <button aria-label="Close">×</button>
+      </header>
+      <div class="window-body">
+        <p>Write something down.</p>
+        <textarea aria-label="Notes"></textarea>
+      </div>
+    </section>
 
-    
+    <aside class="widget">
+      <h2>Water</h2>
+      <p><span id="count">0</span> of 8 glasses</p>
+      <div class="bar">
+        <div class="fill"></div>
+      </div>
+      <button id="drink">Drink</button>
+      <button id="reset">Reset</button>
+    </aside>
   </main>
+
+  <script src="script.js"></script>
 </body>
-
-
 </html>
