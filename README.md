@@ -3,13 +3,13 @@ A small browser-based WebOS made with HTML, CSS, and JavaScript , that lets user
 
 # Screenshots 
 ### Desktop
-![Desktop](assets/latest%20webos%20images/Desktop.png)
+![Desktop](assets/Desktop.png)
 
 ### Apps ( Notes + Doodle app )
-![Apps](assets/latest%20webos%20images/Apps.png)
+![Apps](assets/Apps.png)
 
 ### Widget (Hydration tracker)
-![Widget](assets/latest%20webos%20images/Widget.png)
+![Widget](assets/Widget.png)
 
 **Try it:** [Live Demo](https://nikhilkshub.github.io/Meridian/)
 
@@ -35,3 +35,5 @@ This works because the canvas itself only knows what has been drawn, not which s
 -And I took the Fonts from Google Fonts .
 - Also the background warm dot grid in Doodle app was generated using ChatGPT image generation tool because I couldn't find a suitable background with the right warm color balance.
 - The pencil cursor used in the doodle app and the app icons were actually taken from a free icon website(Flaticon) 
+
+You can see the development process and devlogs on my Stardance project page: [My Project](https://stardance.hackclub.com/projects/19147).
