@@ -4,49 +4,58 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Meridian</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=IBM+Plex+Mono:wght@400;500;700&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"> 
 </head>
 
 <body>
-  <nav class="rail">
+  <header class="topbar">
     <h1>Meridian</h1>
-    <ul>
-      <li>
-        <button data-window="about">
-          <span>1</span>
-          About
-        </button>
-      </li>
-      <li>
-        <button data-window="notes">
-          <span>2</span>
-          Notes
-        </button>
-      </li>
-    </ul>
-    <ul id="open-list"></ul>
-  </nav>
-
+    <!-- JavaScript will fill the clock later -->
+    <time class="clock"></time>
+  </header>
+  
   <main class="desk">
-    <section class="window" id="about">
-      <header class="titlebar">
-        <h2>About</h2>
-        <button aria-label="Close">×</button>
-      </header>
-      <div class="window-body">
-        <p>This is a placeholder.</p>
-      </div>
-    </section>
-    <section class="window" id="notes">
-      <header class="titlebar">
-        <h2>Notes</h2>
-        <button aria-label="Close">×</button>
-      </header>
-      <div class="window-body">
-        <p>This is the notes window</p>
-      </div>
-    </section>
-  </main>
 
+      <ul class="icons">
+          <li>
+              <button data-window="doodle">
+                  <img src="assets/doodleicon.png" alt="doodle app" height="40">
+                  <span class="label">Doodle</span>
+              </button>
+          </li>
+          <li>
+              <button data-window="notes">
+                  <img src="assets/notes.png" alt="notes" height="40">
+                  <span class="label">Notes</span>
+              </button>
+          </li>
+      </ul>
+      <section class="window hidden" id="doodle">
+        <header class="titlebar">
+          <h2>Doodle</h2>
+          <button aria-label="Close">×</button>
+        </header>
+
+        <div class="window-body">
+          <canvas></canvas>
+          <p>Draw something that comes to mind.</p>
+          <button>Undo</button>
+          <button>Clear</button>
+        </div>
+      </section>
+
+      <section class="window hidden" id="notes">
+        <header class="titlebar">
+          <h2>Notes</h2>
+          <button aria-label="Close">×</button>
+        </header>
+        <div class="window-body">
+          <p>This is a placeholder.</p>
+        </div>
+      </section>
+  </main>
 </body>
 </html>
