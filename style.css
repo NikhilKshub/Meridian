@@ -1,0 +1,19 @@
+:root{
+    --paper:#EDE4D0;
+    --ink:31E2A33;
+    --green:#5F8078;
+}
+*{box-sizing: border-box;}
+.hidden{display:none;}
+
+body{
+    margin:0;
+    background-color:var(--paper);
+    color:var(--ink);
+    font-family:'Newsreader',serif;
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+}
+
+
