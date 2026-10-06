@@ -151,9 +151,11 @@ body{
 
 .window-body canvas {
     display: block;
-    background-image: url("assets/paper-texture.png");
+    background-image: url("assets/paper-texture.jpg");
     cursor: url("assets/pencil.png") 3 19, crosshair;
-    background-size: cover;
+    background-position: center;
+    background-size:150%; 
+    background-repeat: no-repeat;
 }
 
 .window-body textarea{
@@ -203,3 +205,6 @@ body{
     background-color:#7990cf;
     width:0;
 }
+
+
+
