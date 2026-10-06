@@ -181,7 +181,7 @@ for(let i =0; i<weekdays.length; i++){
     box.classList.add("day");
     box.textContent = weekdays[i];
     const date=new Date();
-    data.setDate(date.getDate() - todayIndex +1);
+    date.setDate(date.getDate() - todayIndex +i);
     const key= date.getFullYear() + "-" + (date.getMonth()+1) + "-" + date.getDate();
     box.dataset.key=key;
 
@@ -191,6 +191,10 @@ for(let i =0; i<weekdays.length; i++){
     if(i>todayIndex){
         box.disabled = true;
     }
+    box.addEventListener("click",function(){
+        selectedBox=box;
+        render();
+    });
     days.appendChild(box);
 }
 
@@ -199,11 +203,24 @@ for( const mood of moods){
     button.textContent = mood.emoji;
     button.title = mood.name;
     button.setAttribute("aria-label", mood.name);
+
+    button.addEventListener("click",function(){
+        const key = selectedBox.dataset.key;
+        entries[key] = entries[key] || {mood:"", note:""};
+        entries[key].mood = mood.name;
+        save();
+        render();
+    })
     moodsBox.appendChild(button);
 }
 
+noteText.addEventListener("input",function(){
+    entries[selectedBox.dataset.key].note = noteText.value;
+    save();
+});
+
 function render(){
-    for(let i=0; i<days.children.length; 1++){
+    for(let i=0; i<days.children.length; i++){
         const box=days.children[i];
         const entry = entries[box.dataset.key];
         box.textContent=weekdays[i];
@@ -216,6 +233,19 @@ function render(){
             box.style.backgroundColor=mood.color;
         }
         box.classList.toggle("selected", box === selectedBox);
+        if(box === selectedBox){
+            noteTitle.textContent = weekdays[i];
+        }
+    }
+    moodsBox.classList.toggle("hidden",selectedBox === null);
+    note.classList.add("hidden");
+    if(selectedBox){
+        const noteEntry = entries[selectedBox.dataset.key];
+        if(noteEntry){
+            note.classList.remove("hidden");
+            noteText.value = noteEntry.note;
+        }
     }
 }
 
+render();
