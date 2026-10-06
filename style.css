@@ -220,15 +220,8 @@ body{
     width: 340px;
 }
 
-#moods{padding:14px 8px;}
-
-#moods button{
-    font-size:20px;
-    padding:2px 6px;
-    margin:3px;
-}
-
-#days{
+#days,
+#moods {
     display:flex;
     flex-wrap:wrap;
     justify-content:center;
@@ -236,25 +229,33 @@ body{
     padding:16px 12px;
 }
 
-.window-body .day{
-    width:64px ;
+.window-body .tile {
+    width:64px;
     height:64px;
-    padding: 0;
+    padding:0;
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content: center;
-    font-size:14px;
-    white-space:pre-line;
+    justify-content:center;
+    font-size:26px;
+    gap:2px;
 }
 
-.window-body .day:disabled {
-    opacity: 0.45;
-    cursor: default;
+.window-body .tile:disabled {
+    opacity:0.45;
+    cursor:default;
 }
 
-.window-body .today{
+.window-body .tile::before {
+    content:attr(data-name);
+    font-size:11px;
+}
+
+.window-body .today {
     outline:2px solid var(--red);
     outline-offset:2px;
 }
-.window-body .selected{box-shadow:3px 3px 0 var(--ink);}
+
+.window-body .selected {
+    box-shadow:3px 3px 0 var(--ink);
+}

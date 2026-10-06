@@ -153,20 +153,15 @@ function save(){
     localStorage.setItem("entries",JSON.stringify(entries));
 }
 
-
-
-
-
-
+// mood app
 const weekdays=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const moods = [
-    {name: "happy", emoji: "😊", color: "#F6D77A" },
-    {name: "calm", emoji: "😌", color: "#B8D8C0" },
-    {name: "sad", emoji: "😔", color: "#B9C7E6" },
-    {name: "angry", emoji: "😠", color: "#E8A39A" },
-    {name: "tired", emoji: "😴", color: "#C9B8D9" },
-    {name: "excited", emoji: "🤩", color: "#F2B880" },
-    {name: "something is missing", emoji:"🥺", color:"#D3D3D3"}
+    { name: "happy", emoji: "😊", color: "#F6D77A", prompt: "What made you smile today?" },
+    { name: "calm", emoji: "😌", color: "#B8D8C0", prompt: "What helped you feel at peace?" },
+    { name: "sad", emoji: "😔", color: "#B9C7E6", prompt: "What was weighing on you today?" },
+    { name: "angry", emoji: "😠", color: "#E8A39A", prompt: "What got under your skin today?" },
+    { name: "tired", emoji: "😴", color: "#C9B8D9", prompt: "What drained your energy today?" },
+    { name: "lonely", emoji: "🥺", color: "#D3D3D3", prompt: "What made you feel alone today?" }
 ];
 
 const days=document.getElementById("days");
@@ -178,8 +173,8 @@ const todayIndex = (new Date().getDay() +6) % 7;
 
 for(let i =0; i<weekdays.length; i++){
     const box = document.createElement("button");
-    box.classList.add("day");
-    box.textContent = weekdays[i];
+    box.classList.add("tile");
+    box.dataset.name = weekdays[i];
     const date=new Date();
     date.setDate(date.getDate() - todayIndex +i);
     const key= date.getFullYear() + "-" + (date.getMonth()+1) + "-" + date.getDate();
@@ -200,8 +195,9 @@ for(let i =0; i<weekdays.length; i++){
 
 for( const mood of moods){
     const button = document.createElement("button");
+    button.classList.add("tile");
+    button.dataset.name=mood.name;
     button.textContent = mood.emoji;
-    button.title = mood.name;
     button.setAttribute("aria-label", mood.name);
 
     button.addEventListener("click",function(){
@@ -223,14 +219,19 @@ function render(){
     for(let i=0; i<days.children.length; i++){
         const box=days.children[i];
         const entry = entries[box.dataset.key];
-        box.textContent=weekdays[i];
+        box.textContent="";
         box.style.backgroundColor = "";
         if(entry){
             const mood = moods.find(function(m){
                 return m.name === entry.mood;
             });
-            box.textContent = weekdays[i] + "\n" + mood.emoji;
+            box.textContent = mood.emoji;
             box.style.backgroundColor=mood.color;
+         
+            if(box===selectedBox){
+                noteText.placeholder = mood.prompt;
+                noteTitle.style.backgroundColor = mood.color;
+            }
         }
         box.classList.toggle("selected", box === selectedBox);
         if(box === selectedBox){
@@ -247,5 +248,5 @@ function render(){
         }
     }
 }
-
 render();
+
