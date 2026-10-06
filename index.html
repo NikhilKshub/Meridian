@@ -29,6 +29,12 @@
           <span class="label">Notes</span>
         </button>
       </li>
+      <li>
+        <button data-window="mood">
+          <img src="assets/smile.png" alt="Mood tracker app">
+          <span class="label">Mood</span>
+        </button>
+      </li>
     </ul>
 
     <section class="window hidden" id="doodle">
@@ -57,6 +63,35 @@
       </div>
     </section>
 
+    <section class="window hidden" id="mood">
+      <header class="titlebar">
+        <h2>Mood</h2>
+        <button aria-label="Close">×</button>
+      </header>
+      <div class="window-body">
+        <p>Check in with yourself.</p>
+        <h3 id="month-name"></h3>
+        <ul class="weekdays">
+          <li>Mon</li>
+          <li>Tue</li>
+          <li>Wed</li>
+          <li>Thu</li>
+          <li>Fri</li>
+          <li>Sat</li>
+          <li>Sun</li>
+        </ul>
+        <div id="days"></div>
+        <div class="tools">
+        <button data-mood="happy">happy</button>
+        <button data-mood="calm">calm</button>
+        <button data-mood="sad">sad</button>
+        <button data-mood="angry">angry</button>
+        <button data-mood="tired">tired</button>
+        <button data-mood="something">something feels missing</button>
+        </div>
+      </div>
+    </section>
+
     <aside class="widget">
       <h2>Water</h2>
       <p><span id="count">0</span> of 8 glasses</p>
@@ -67,6 +102,8 @@
       <button id="reset">Reset</button>
     </aside>
   </main>
+
+  <!-- WEBOS2.0 STARTING FROM HERE -->
 
   <script src="script.js"></script>
 </body>
