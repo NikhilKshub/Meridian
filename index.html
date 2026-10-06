@@ -69,26 +69,14 @@
         <button aria-label="Close">×</button>
       </header>
       <div class="window-body">
-        <p>Check in with yourself.</p>
-        <h3 id="month-name"></h3>
-        <ul class="weekdays">
-          <li>Mon</li>
-          <li>Tue</li>
-          <li>Wed</li>
-          <li>Thu</li>
-          <li>Fri</li>
-          <li>Sat</li>
-          <li>Sun</li>
-        </ul>
+        <p>How's your mood today?</p>
+
         <div id="days"></div>
-        <div class="tools">
-        <button data-mood="happy">happy</button>
-        <button data-mood="calm">calm</button>
-        <button data-mood="sad">sad</button>
-        <button data-mood="angry">angry</button>
-        <button data-mood="tired">tired</button>
-        <button data-mood="something">something feels missing</button>
-        </div>
+        <div class="tools hidden" id="moods"></div>
+      </div>
+      <div class="note window-body hidden">
+        <p id="note-title"></p>
+        <textarea id="note-text" placeholder="How did your day go?" aria-label="Day note"></textarea>
       </div>
     </section>
 
