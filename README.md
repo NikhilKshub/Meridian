@@ -33,7 +33,7 @@ This works because the canvas itself only knows what has been drawn, not which s
 - Claude (AI):- It actually helped me understand some concepts, solve bugs, and explore design ideas, theme colors, and fonts. Claude suggested the theme colors and fonts used in the project. It also helped me understand CSS and JavaScript concepts while I was building the project.
 - The final design and layout were decided by me. Claude originally suggested a rail-based layout, but I didn't like it, so I changed it to the simpler desktop layout used in the final project.
 -And I took the Fonts from Google Fonts .
-- Also the background warm dot grid in Doodle app was generated using ChatGPT image generation tool because I couldn't find a suitable background with the right warm color balance.
+- Also the background dot grid in Doodle app was taken from internet its human made not AI generated because i replaced it from the previous one which was generated using ChatGPT image generation tool because I couldn't find a suitable background with the right warm color balance.
 - The pencil cursor used in the doodle app and the app icons were actually taken from a free icon website(Flaticon) 
 
 You can see the development process and devlogs on my Stardance project page: [My Project](https://stardance.hackclub.com/projects/19147).
