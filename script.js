@@ -8,7 +8,6 @@ let currentStroke = [];
 let glasses = 0;
 const goal = 8;
 
-
 const clock = document.querySelector(".clock");
 function updateClock() {
     const now = new Date();
@@ -144,3 +143,79 @@ resetButton.addEventListener("click",function(){
     glasses = 0;
     showWater();
 });
+
+
+
+// WEBOS 2.0 STARTING FROM HERE
+let selectedBox=null;
+const entries = JSON.parse(localStorage.getItem("entries")) ||{};
+function save(){
+    localStorage.setItem("entries",JSON.stringify(entries));
+}
+
+
+
+
+
+
+const weekdays=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const moods = [
+    {name: "happy", emoji: "😊", color: "#F6D77A" },
+    {name: "calm", emoji: "😌", color: "#B8D8C0" },
+    {name: "sad", emoji: "😔", color: "#B9C7E6" },
+    {name: "angry", emoji: "😠", color: "#E8A39A" },
+    {name: "tired", emoji: "😴", color: "#C9B8D9" },
+    {name: "excited", emoji: "🤩", color: "#F2B880" },
+    {name: "something is missing", emoji:"🥺", color:"#D3D3D3"}
+];
+
+const days=document.getElementById("days");
+const moodsBox=document.getElementById("moods");
+const note = document.querySelector(".note");
+const noteTitle = document.getElementById("note-title");
+const noteText = document.getElementById("note-text");
+const todayIndex = (new Date().getDay() +6) % 7;
+
+for(let i =0; i<weekdays.length; i++){
+    const box = document.createElement("button");
+    box.classList.add("day");
+    box.textContent = weekdays[i];
+    const date=new Date();
+    data.setDate(date.getDate() - todayIndex +1);
+    const key= date.getFullYear() + "-" + (date.getMonth()+1) + "-" + date.getDate();
+    box.dataset.key=key;
+
+    if(i === todayIndex){
+        box.classList.add("today");
+    }
+    if(i>todayIndex){
+        box.disabled = true;
+    }
+    days.appendChild(box);
+}
+
+for( const mood of moods){
+    const button = document.createElement("button");
+    button.textContent = mood.emoji;
+    button.title = mood.name;
+    button.setAttribute("aria-label", mood.name);
+    moodsBox.appendChild(button);
+}
+
+function render(){
+    for(let i=0; i<days.children.length; 1++){
+        const box=days.children[i];
+        const entry = entries[box.dataset.key];
+        box.textContent=weekdays[i];
+        box.style.backgroundColor = "";
+        if(entry){
+            const mood = moods.find(function(m){
+                return m.name === entry.mood;
+            });
+            box.textContent = weekdays[i] + "\n" + mood.emoji;
+            box.style.backgroundColor=mood.color;
+        }
+        box.classList.toggle("selected", box === selectedBox);
+    }
+}
+
