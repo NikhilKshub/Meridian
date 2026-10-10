@@ -35,6 +35,12 @@
           <span class="label">Mood</span>
         </button>
       </li>
+      <li>
+        <button data-window="music">
+          <img src="assets/music.png" alt="Music app">
+          <span class="label">Music</span>
+        </button>
+      </li>
     </ul>
 
     <section class="window hidden" id="doodle">
@@ -77,6 +83,16 @@
       <div class="note window-body hidden">
         <p id="note-title"></p>
         <textarea id="note-text" placeholder="How did your day go?" aria-label="Day note"></textarea>
+      </div>
+    </section>
+
+    <section class="window-hidden" id="music">
+      <header class="titlebar">
+        <h2>Music</h2>
+        <button aria-label="Close">×</button>
+      </header>
+      <div class="window-body">
+        <p>A little soundtrack for the moment.</p>
       </div>
     </section>
 
