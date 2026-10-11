@@ -308,7 +308,7 @@ body{
 }
 
 .turntable{
-    position:absolute;
+    position:relative;
     width:200px;
     height:170px;
 }
@@ -318,7 +318,7 @@ body{
     top:10px;
     left:0;
     width:150px;
-    height:150;
+    height:150px;
     border-radius:50%;
     background-color:var(--ink);
     box-shadow:
@@ -357,5 +357,59 @@ body{
 @keyframes spin {
     to{transform: rotate(360deg);}
 }
-
 .deck.playing .disc{animation-play-state: running;}
+
+.arm{
+    position: absolute;
+    top:4px;
+    right:20px;
+    width:4px;
+    height:90px;
+    background-color:var(--red);
+    transform-origin:top center;
+    transition: transform 0.6s;
+}
+
+.arm::after{
+    content: "";
+    position:absolute;
+    bottom: -4px;
+    left:-4px;
+    width: 12px;
+    height: 8px;
+    background-color:var(--red);
+}
+
+.deck.playing .arm{transform: rotate(30deg);}
+
+#track-title{
+    margin:0;
+    font-family: 'Caveat', cursive;
+    font-size:28px;
+}
+
+#track-artist{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+}
+
+#time{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size:11px;
+}
+
+.controls{
+    display:flex;
+    gap:8px;
+}
+
+.controls button {box-shadow: 2px 2px 0 var(--ink);}
+.controls button:active {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+}
+
+#play{
+    background-color: var(--ink);
+    color:var(--paper);
+}
