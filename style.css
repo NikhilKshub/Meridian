@@ -215,9 +215,9 @@ body{
 /* WEBOS 2.0  STARTING FROM HERE  */
 
 #mood{
-    top:80px;
+    top:100px;
     left:500px;
-    width: 340px;
+    width: 360px;
 }
 
 #days,
@@ -259,3 +259,103 @@ body{
 .window-body .selected {
     box-shadow:3px 3px 0 var(--ink);
 }
+
+.player{display:flex;}
+#tracks{
+    list-style:none;
+    margin:0;
+    padding:0;
+    width:200px;
+    flex:none;
+    border-right: 1px solid var(--ink);
+}
+
+.deck{
+    flex:1;
+    display: flex;
+    flex-direction: column;
+    align-items:center;
+    gap:8px;
+    padding:16px;
+}
+.deck .bar{width:220px;}
+
+.window-body .track{
+    display:block;
+    width:100%;
+    text-align:left;
+    padding:10px 12px;
+    border:none;
+    border-bottom:1px solid var(--ink);
+    border-radius:0;
+}
+
+.window-body .track::after{
+    content:attr(data-artist);
+    display:block;
+    font-size:11px;
+}
+
+.window-body .active{
+    background-color:var(--ink);
+    color:var(--paper);
+}
+
+#music{
+    top:100px;
+    left:650px;
+    width:560px;
+}
+
+.turntable{
+    position:absolute;
+    width:200px;
+    height:170px;
+}
+
+.disc{
+    position:absolute;
+    top:10px;
+    left:0;
+    width:150px;
+    height:150;
+    border-radius:50%;
+    background-color:var(--ink);
+    box-shadow:
+        inset 0 0 0 11px var(--ink),
+        inset 0 0 0 12px #4a5a66,
+        inset 0 0 0 25px var(--ink),
+        inset 0 0 0 26px #4a5a66;
+    animation: spin 4s linear infinite;
+    animation-play-state: paused;
+}
+
+.disc::before{
+    content: "";
+    position: absolute;
+    top:10px;
+    left:50%;
+    width:8px;
+    height:8px;
+    margin-left:-4px;
+    border-radius:50%;
+    background-color:var(--page);
+}
+
+.disc::after{
+    content: "";
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:46px;
+    height:46px;
+    margin:-23px 0 0 -23px;
+    border-radius: 50%;
+    background-color: var(--label, var(--red));
+}
+
+@keyframes spin {
+    to{transform: rotate(360deg);}
+}
+
+.deck.playing .disc{animation-play-state: running;}
